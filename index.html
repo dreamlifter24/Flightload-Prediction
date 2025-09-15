@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Flight Journeys with Date Picker and Scroll Toggle Sidebar</title>
+  <title>Flight Load Prediction</title>
   <style>
     /* ~~~ (Previous CSS same as before) ~~~ */
     html, body {
@@ -251,10 +251,10 @@
           <label for="flightNumber">Flight Number:</label>
           <input type="text" id="flightNumber" placeholder="e.g. AB1234" required />
 
-          <label for="departure">Departure Destination:</label>
+          <label for="departure">Departure :</label>
           <input type="text" id="departure" readonly />
 
-          <label for="arrival">Arrival Destination:</label>
+          <label for="arrival">Arrival :</label>
           <input type="text" id="arrival" readonly />
 
           <label for="dateInput">Journey Date:</label>
@@ -390,9 +390,9 @@
   }
 
   async function addTabPrompt() {
-    const dep = prompt("Enter Departure Destination for the new journey:");
+    const dep = prompt("Enter Departure for the new journey:");
     if (!dep) return;
-    const arr = prompt("Enter Arrival Destination for the new journey:");
+    const arr = prompt("Enter Arrival for the new journey:");
     if (!arr) return;
 
     const date = await promptDate();
@@ -672,3 +672,4 @@
 </script>
 </body>
 </html>
+
