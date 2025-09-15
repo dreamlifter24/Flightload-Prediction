@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Flight Journeys with Scrollable Sidebar and Date Picker</title>
+  <title>Flight Load Prediction</title>
   <style>
     html, body {
       height: 100%;
@@ -143,7 +143,8 @@
       margin: 10px 0 5px;
     }
     input[type="text"],
-    input[type="number"] {
+    input[type="number"],
+    input[type="date"] {
       padding: 5px;
       width: 100%;
       max-width: 320px;
@@ -153,13 +154,6 @@
       background: #e9ecef;
       border: 1px solid #ccc;
       cursor: default;
-    }
-    input[type="date"] {
-      padding: 5px;
-      width: 100%;
-      max-width: 320px;
-      box-sizing: border-box;
-      cursor: pointer;
     }
     select.editDropdown {
       width: 100%;
@@ -266,9 +260,6 @@
           <label for="arrival">Arrival Destination:</label>
           <input type="text" id="arrival" readonly />
 
-          <label for="journeyDate">Journey Date:</label>
-          <input type="text" id="journeyDate" readonly style="background:#e9ecef;" />
-
           <label for="totalSeatsAvailable">Total Seats Available:</label>
           <input type="number" id="totalSeatsAvailable" min="0" placeholder="e.g. 150" required />
 
@@ -326,15 +317,102 @@
     }
   });
 
-  function sanitizeKey(dep, arr, date) {
-    return dep.trim().toLowerCase() + '→' + arr.trim().toLowerCase() + '→' + date;
-  }
-
   function formatDate(d) {
     const day = ('0' + d.getDate()).slice(-2);
     const month = ('0' + (d.getMonth() + 1)).slice(-2);
     const year = d.getFullYear();
     return `${day}/${month}/${year}`;
+  }
+
+  function sanitizeKey(dep, arr, date) {
+    return dep.trim().toLowerCase() + '→' + arr.trim().toLowerCase() + '→' + date;
+  }
+
+  function addTabPrompt() {
+    const dep = prompt("Enter Departure Destination for the new journey:");
+    if (!dep) return;
+    const arr = prompt("Enter Arrival Destination for the new journey:");
+    if (!arr) return;
+
+    // Use date picker in a temporary modal prompt
+    const date = promptDate();
+    if (!date) return;
+
+    const dateStr = formatDate(date);
+    const key = sanitizeKey(dep, arr, dateStr);
+    if (journeys[key]) {
+      alert("Journey already exists.");
+      return;
+    }
+    journeys[key] = {
+      departure: dep.trim(),
+      arrival: arr.trim(),
+      date: dateStr,
+      flights: []
+    };
+    addTabButton(key);
+    selectJourney(key);
+  }
+
+  // Create a modal date picker prompt
+  function promptDate() {
+    return new Promise(resolve => {
+      const modal = document.createElement('div');
+      modal.style.position = 'fixed';
+      modal.style.top = 0; modal.style.left = 0; modal.style.right = 0; modal.style.bottom = 0;
+      modal.style.background = 'rgba(0,0,0,0.4)';
+      modal.style.display = 'flex';
+      modal.style.justifyContent = 'center';
+      modal.style.alignItems = 'center';
+      modal.style.zIndex = 10000;
+
+      const container = document.createElement('div');
+      container.style.background = '#fff';
+      container.style.padding = '20px';
+      container.style.borderRadius = '8px';
+      container.style.textAlign = 'center';
+      container.style.minWidth = '250px';
+
+      const label = document.createElement('label');
+      label.textContent = 'Select Journey Date:';
+      label.style.display = 'block';
+      label.style.marginBottom = '8px';
+
+      const input = document.createElement('input');
+      input.type = 'date';
+      input.style.width = '100%';
+      input.style.fontSize = '16px';
+      input.valueAsDate = new Date();
+
+      const btnConfirm = document.createElement('button');
+      btnConfirm.textContent = 'OK';
+      btnConfirm.style.marginTop = '15px';
+      btnConfirm.style.padding = '6px 12px';
+      btnConfirm.onclick = () => {
+        if (!input.value) {
+          alert('Please select a date.');
+          return;
+        }
+        document.body.removeChild(modal);
+        resolve(new Date(input.value));
+      };
+
+      const btnCancel = document.createElement('button');
+      btnCancel.textContent = 'Cancel';
+      btnCancel.style.marginLeft = '10px';
+      btnCancel.style.padding = '6px 12px';
+      btnCancel.onclick = () => {
+        document.body.removeChild(modal);
+        resolve(null);
+      };
+
+      container.appendChild(label);
+      container.appendChild(input);
+      container.appendChild(btnConfirm);
+      container.appendChild(btnCancel);
+      modal.appendChild(container);
+      document.body.appendChild(modal);
+    });
   }
 
   async function addTabPrompt() {
@@ -343,50 +421,24 @@
     const arr = prompt("Enter Arrival Destination for the new journey:");
     if (!arr) return;
 
-    // Use built-in date input for selecting date in a modal
-    const tmpInput = document.createElement('input');
-    tmpInput.type = 'date';
-    document.body.appendChild(tmpInput);
-    tmpInput.style.position = 'fixed';
-    tmpInput.style.left = '-100px';
-    tmpInput.focus();
+    // Use date picker in a modal prompt
+    const date = await promptDate();
+    if (!date) return; // user cancelled
 
-    return new Promise((resolve) => {
-      tmpInput.onchange = () => {
-        const val = tmpInput.value; // yyyy-mm-dd
-        document.body.removeChild(tmpInput);
-        if (!val) {
-          alert("Date not selected, journey not added.");
-          resolve();
-          return;
-        }
-        // Convert yyyy-mm-dd to dd/mm/yyyy
-        const parts = val.split('-');
-        const dateStr = `${parts[2]}/${parts[1]}/${parts[0]}`;
-        const key = sanitizeKey(dep, arr, dateStr);
-        if (journeys[key]) {
-          alert("Journey already exists.");
-          resolve();
-          return;
-        }
-        journeys[key] = {
-          departure: dep.trim(),
-          arrival: arr.trim(),
-          date: dateStr,
-          flights: []
-        };
-        addTabButton(key);
-        selectJourney(key);
-        resolve();
-      };
-      // Also handle blur if user cancels the date picker
-      tmpInput.onblur = () => {
-        if (document.body.contains(tmpInput)) {
-          document.body.removeChild(tmpInput);
-        }
-        resolve();
-      };
-    });
+    const dateStr = formatDate(date);
+    const key = sanitizeKey(dep, arr, dateStr);
+    if (journeys[key]) {
+      alert("Journey already exists.");
+      return;
+    }
+    journeys[key] = {
+      departure: dep.trim(),
+      arrival: arr.trim(),
+      date: dateStr,
+      flights: []
+    };
+    addTabButton(key);
+    selectJourney(key);
   }
 
   function addTabButton(key) {
@@ -452,7 +504,6 @@
     const journey = journeys[key];
     document.getElementById('departure').value = journey.departure;
     document.getElementById('arrival').value = journey.arrival;
-    document.getElementById('journeyDate').value = journey.date;
 
     document.getElementById('homePage').style.display = 'none';
     document.getElementById('flightInputSection').style.display = 'block';
@@ -465,7 +516,6 @@
   function clearRightPanel() {
     document.getElementById('departure').value = '';
     document.getElementById('arrival').value = '';
-    document.getElementById('journeyDate').value = '';
     document.getElementById('flightsBody').innerHTML = '';
     document.getElementById('flightsTable').style.display = 'none';
     clearPrediction();
@@ -512,7 +562,7 @@
 
   function addFlightToCurrentJourney() {
     if (!currentJourneyKey) {
-      alert("Please add and select a journey tab first (departure, arrival, and date).");
+      alert("Please add and select a journey tab first (departure and arrival).");
       return;
     }
     const flightNumber = document.getElementById('flightNumber').value.trim();
@@ -632,6 +682,7 @@
     analysisDisplay.style.display = 'block';
   }
 
+  // On load, show the Home tab content only
   window.onload = () => {
     selectHomeTab();
   };
