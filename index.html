@@ -5,12 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Flight Journeys with Date Picker and Scroll Toggle Sidebar</title>
   <style>
-    /* Styles same as previous with added styling for date input */
     html, body {
       height: 100%;
       margin: 0;
       font-family: Arial, sans-serif;
-      overflow: hidden;
+      overflow: hidden; /* Prevent overall scroll */
     }
     #container {
       display: flex;
@@ -29,7 +28,7 @@
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
       box-sizing: border-box;
-      padding-top: 48px;
+      padding-top: 48px; /* space for toggle button */
       position: relative;
     }
     #rightPanel {
@@ -614,20 +613,12 @@
       row.classList.remove('highlight');
     });
 
-    // Find earliest flight that is not earlier than targeted flight
-    // Find index of targeted flight first
-    const targetedIndex = flights.findIndex(f => f.isTargeted);
-    if(targetedIndex === -1) {
-      alert("Please set one targeted flight and rerun the prediction.");
-      return;
-    }
-
     let peopleToTransfer = 0;
     let earliestFlightIndex = -1;
     let analysisLog = `Prediction Analysis Procedure for journey ${journeys[currentJourneyKey].departure} → ${journeys[currentJourneyKey].arrival} (${journeys[currentJourneyKey].date}):\n\n`;
 
-    // Start checking from targeted flight onwards
-    for(let i = targetedIndex; i < flights.length; i++) {
+    // Start checking from the first flight added
+    for(let i = 0; i < flights.length; i++) {
       const flight = flights[i];
       let queueingBefore = flight.peopleQueueingBefore + peopleToTransfer;
       analysisLog += `Flight ${i + 1} (${flight.flightNumber}):\n`;
