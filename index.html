@@ -5,11 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Flight Journeys with Date Picker and Scroll Toggle Sidebar</title>
   <style>
+    /* ~~~ (Previous CSS same as before) ~~~ */
     html, body {
       height: 100%;
       margin: 0;
       font-family: Arial, sans-serif;
-      overflow: hidden; /* Prevent overall scroll */
+      overflow: hidden;
     }
     #container {
       display: flex;
@@ -26,17 +27,15 @@
       transition: width 0.3s ease;
       height: 100vh;
       overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-      box-sizing: border-box;
-      padding-top: 48px; /* space for toggle button */
+      padding-top: 48px;
       position: relative;
+      box-sizing: border-box;
     }
     #rightPanel {
       flex-grow: 1;
       padding: 20px;
       height: 100vh;
       overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
       transition: margin-left 0.3s ease;
       box-sizing: border-box;
     }
@@ -100,12 +99,10 @@
       display: flex;
       flex-direction: column;
       overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
       margin-top: 10px;
     }
     #tabList {
       overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
     }
     .tabButton {
       display: flex;
@@ -320,6 +317,7 @@
     }
   });
 
+  // Date formatting helpers
   function formatDate(d) {
     const day = ('0' + d.getDate()).slice(-2);
     const month = ('0' + (d.getMonth() + 1)).slice(-2);
@@ -596,10 +594,11 @@
     clearPrediction();
 
     const flights = journeys[currentJourneyKey].flights;
-
     const rows = document.querySelectorAll('#flightsBody tr');
+
+    // Sync flight data and targeted flight state from editable UI
     rows.forEach((row, i) => {
-      let cells = row.cells;
+      const cells = row.cells;
       flights[i].flightNumber = cells[0].textContent.trim();
       flights[i].totalSeatsAvailable = parseInt(cells[1].textContent) || 0;
       flights[i].totalSeatsBooked = parseInt(cells[2].textContent) || 0;
@@ -613,31 +612,41 @@
       row.classList.remove('highlight');
     });
 
+    // Find position of first targeted flight
+    const firstTargetedIndex = flights.findIndex(f => f.isTargeted);
+    if(firstTargetedIndex === -1) {
+      alert("Please select one targeted flight before executing prediction.");
+      return;
+    }
+
     let peopleToTransfer = 0;
     let earliestFlightIndex = -1;
     let analysisLog = `Prediction Analysis Procedure for journey ${journeys[currentJourneyKey].departure} → ${journeys[currentJourneyKey].arrival} (${journeys[currentJourneyKey].date}):\n\n`;
 
-    // Start checking from the first flight added
+    // Process all flights, considering transferred staff each step,
+    // but only accept earliest flight at or after the targeted flight position
     for(let i = 0; i < flights.length; i++) {
       const flight = flights[i];
       let queueingBefore = flight.peopleQueueingBefore + peopleToTransfer;
-      analysisLog += `Flight ${i + 1} (${flight.flightNumber}):\n`;
+      analysisLog += `Flight ${i+1} (${flight.flightNumber}):\n`;
       analysisLog += `  Seats Remaining: ${flight.seatsRemaining}\n`;
       analysisLog += `  People Queueing Before (including transferred): ${queueingBefore}\n`;
 
-      if (flight.seatsRemaining > queueingBefore) {
+      if(flight.seatsRemaining > queueingBefore) {
         peopleToTransfer = 0;
         analysisLog += `  Decision: Seats remaining > people queueing, no transfer needed.\n`;
       } else {
         peopleToTransfer = queueingBefore - flight.seatsRemaining;
         analysisLog += `  Decision: Seats remaining ≤ people queueing, transferring ${peopleToTransfer} people to next flight.\n`;
       }
+
       flight.staffRolled = peopleToTransfer;
       rows[i].cells[6].textContent = peopleToTransfer;
 
-      if (peopleToTransfer === 0 && earliestFlightIndex === -1) {
+      if(peopleToTransfer === 0 && earliestFlightIndex === -1 && i >= firstTargetedIndex) {
+        // Earliest flight must be at or after targeted flight
         earliestFlightIndex = i;
-        analysisLog += `  Conclusion: Earliest flight you can get on found: Flight ${i + 1} (${flight.flightNumber}).\n`;
+        analysisLog += `  Conclusion: Earliest flight you can get on found: Flight ${i+1} (${flight.flightNumber}).\n`;
         break;
       }
       analysisLog += '\n';
@@ -645,18 +654,18 @@
 
     const predictionResult = document.getElementById('predictionResult');
     const analysisDisplay = document.getElementById('analysisProcedure');
-    if (earliestFlightIndex === -1) {
+    if(earliestFlightIndex === -1) {
       predictionResult.textContent = 'No flight can accommodate you based on the provided data.';
     } else {
       rows[earliestFlightIndex].classList.add('highlight');
       predictionResult.textContent = `Earliest flight you can get on is: ${flights[earliestFlightIndex].flightNumber}`;
     }
+
     predictionResult.style.display = 'block';
     analysisDisplay.textContent = analysisLog;
     analysisDisplay.style.display = 'block';
   }
 
-  // On load, show the Home tab content only
   window.onload = () => {
     selectHomeTab();
   };
