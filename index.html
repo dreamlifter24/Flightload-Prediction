@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Flight Load Prediction</title>
+  <title>Flight Journeys with Date Picker and Scroll Toggle Sidebar</title>
   <style>
     html, body {
       height: 100%;
@@ -85,7 +85,7 @@
       z-index: 4;
     }
     #addJourneyBtn {
-      margin: 10px 10px 0 10px;
+      margin: 10px 10px;
       padding: 10px 15px;
       cursor: pointer;
       border: 1px solid #ccc;
@@ -260,6 +260,9 @@
           <label for="arrival">Arrival Destination:</label>
           <input type="text" id="arrival" readonly />
 
+          <label for="dateInput">Journey Date:</label>
+          <input type="date" id="dateInput" readonly />
+
           <label for="totalSeatsAvailable">Total Seats Available:</label>
           <input type="number" id="totalSeatsAvailable" min="0" placeholder="e.g. 150" required />
 
@@ -318,44 +321,31 @@
   });
 
   function formatDate(d) {
+    // format  yyyy-mm-dd to dd/mm/yyyy
     const day = ('0' + d.getDate()).slice(-2);
     const month = ('0' + (d.getMonth() + 1)).slice(-2);
     const year = d.getFullYear();
     return `${day}/${month}/${year}`;
   }
 
+  function formatDateFromISO(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return formatDate(d);
+  }
+
+  function parseDateToISO(str) {
+    // from dd/mm/yyyy to yyyy-mm-dd for input type=date value
+    const parts = str.split('/');
+    if (parts.length !== 3) return '';
+    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+  }
+
   function sanitizeKey(dep, arr, date) {
     return dep.trim().toLowerCase() + '→' + arr.trim().toLowerCase() + '→' + date;
   }
 
-  function addTabPrompt() {
-    const dep = prompt("Enter Departure Destination for the new journey:");
-    if (!dep) return;
-    const arr = prompt("Enter Arrival Destination for the new journey:");
-    if (!arr) return;
-
-    // Use date picker in a temporary modal prompt
-    const date = promptDate();
-    if (!date) return;
-
-    const dateStr = formatDate(date);
-    const key = sanitizeKey(dep, arr, dateStr);
-    if (journeys[key]) {
-      alert("Journey already exists.");
-      return;
-    }
-    journeys[key] = {
-      departure: dep.trim(),
-      arrival: arr.trim(),
-      date: dateStr,
-      flights: []
-    };
-    addTabButton(key);
-    selectJourney(key);
-  }
-
-  // Create a modal date picker prompt
-  function promptDate() {
+  async function promptDate() {
     return new Promise(resolve => {
       const modal = document.createElement('div');
       modal.style.position = 'fixed';
@@ -421,11 +411,10 @@
     const arr = prompt("Enter Arrival Destination for the new journey:");
     if (!arr) return;
 
-    // Use date picker in a modal prompt
     const date = await promptDate();
-    if (!date) return; // user cancelled
-
+    if (!date) return;
     const dateStr = formatDate(date);
+
     const key = sanitizeKey(dep, arr, dateStr);
     if (journeys[key]) {
       alert("Journey already exists.");
@@ -447,8 +436,8 @@
     btn.className = 'tabButton';
     btn.dataset.key = key;
 
-    const spanText = document.createElement('span');
     const journey = journeys[key];
+    const spanText = document.createElement('span');
     spanText.textContent = `${journey.departure} → ${journey.arrival} (${journey.date})`;
     spanText.style.flexGrow = '1';
     btn.appendChild(spanText);
@@ -504,6 +493,7 @@
     const journey = journeys[key];
     document.getElementById('departure').value = journey.departure;
     document.getElementById('arrival').value = journey.arrival;
+    document.getElementById('dateInput').value = parseDateToISO(journey.date);
 
     document.getElementById('homePage').style.display = 'none';
     document.getElementById('flightInputSection').style.display = 'block';
@@ -516,6 +506,7 @@
   function clearRightPanel() {
     document.getElementById('departure').value = '';
     document.getElementById('arrival').value = '';
+    document.getElementById('dateInput').value = '';
     document.getElementById('flightsBody').innerHTML = '';
     document.getElementById('flightsTable').style.display = 'none';
     clearPrediction();
@@ -680,6 +671,12 @@
     predictionResult.style.display = 'block';
     analysisDisplay.textContent = analysisLog;
     analysisDisplay.style.display = 'block';
+  }
+
+  function parseDateToISO(str) {
+    const parts = str.split('/');
+    if (parts.length !== 3) return '';
+    return `${parts[2]}-${parts[1]}-${parts[0]}`;
   }
 
   // On load, show the Home tab content only
