@@ -3,63 +3,34 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Flight Journeys with Toggleable Tabs</title>
+  <title>Flight Journeys with Editable Targeted Flight Dropdown</title>
   <style>
     body {
-      margin: 0; padding: 0;
       font-family: Arial, sans-serif;
-      height: 100vh;
-      display: flex;
+      margin: 0; padding: 0; height: 100vh;
+      display: flex; flex-direction: row;
       overflow: hidden;
-    }
-    #toggleTabsBtn {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      z-index: 1100;
-      background: #007bff;
-      border: none;
-      color: white;
-      padding: 10px 12px;
-      font-size: 20px;
-      cursor: pointer;
-      border-radius: 4px;
-      display: none; /* show on small screens */
     }
     #tabs {
       width: 250px;
-      min-width: 250px;
       border-right: 1px solid #ccc;
       display: flex;
       flex-direction: column;
+      overflow-y: auto;
       background: #f9f9f9;
       flex-shrink: 0;
-      position: relative;
-      transition: transform 0.3s ease;
-      overflow: hidden;
-    }
-    #tabs.hidden {
-      transform: translateX(-100%);
-      position: fixed;
-      z-index: 1000;
-      height: 100vh;
-      top: 0; left: 0;
-      box-shadow: 2px 0 8px rgba(0,0,0,0.3);
     }
     #tabsHeader {
       padding: 15px;
       font-weight: bold;
       border-bottom: 1px solid #ccc;
-      background: white;
+      background: #fff;
       text-align: center;
-      position: relative;
-      z-index: 10;
     }
     #tabListWrapper {
       flex-grow: 1;
       display: flex;
       flex-direction: column;
-      overflow-y: auto;
     }
     #tabList {
       flex-grow: 1;
@@ -78,9 +49,6 @@
       text-align: left;
       font-size: 14px;
       box-sizing: border-box;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
     .tabButton.active {
       background: #e9ecef;
@@ -104,24 +72,6 @@
       top: 0;
       border-bottom: 2px solid #007bff;
       user-select: none;
-    }
-    #addJourneyBtn {
-      padding: 10px 15px;
-      border-top: 1px solid #ccc;
-      background: #fff;
-      cursor: pointer;
-      font-weight: bold;
-      outline: none;
-      border: none;
-      width: 100%;
-      box-sizing: border-box;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      flex-shrink: 0;
-    }
-    #addJourneyBtn:hover {
-      background: #e9ecef;
     }
     #rightPanel {
       flex-grow: 1;
@@ -214,61 +164,16 @@
       font-size: 1.2em;
       color: #444;
     }
-
-    /* Responsive for phones */
-    @media (max-width: 600px) {
-      #toggleTabsBtn {
-        display: block;
-      }
-      body {
-        flex-direction: column;
-        height: 100vh;
-      }
-      #tabs {
-        width: 100%;
-        min-width: unset;
-        height: 260px;
-        border-right: none;
-        border-bottom: 1px solid #ccc;
-        position: relative;
-        transform: none !important;
-        display: flex !important;
-      }
-      #tabs.hidden {
-        display: none !important;
-        transform: none !important;
-        position: relative !important;
-        height: 0 !important;
-      }
-      #rightPanel {
-        flex-grow: 1;
-        height: calc(100vh - 260px);
-        overflow-y: auto;
-      }
-      #tabListWrapper {
-        max-height: 200px;
-        overflow-y: auto;
-      }
-      #addJourneyBtn {
-        position: sticky;
-        bottom: 0;
-        background: #f8f9fa;
-        z-index: 10;
-        border-top: 1px solid #ccc;
-        width: 100%;
-      }
-    }
   </style>
 </head>
 <body>
-  <button id="toggleTabsBtn" title="Toggle navigation menu" onclick="toggleTabs()">☰</button>  
   <div id="tabs">
     <div id="tabsHeader">Flight Journeys</div>
     <div id="tabListWrapper">
       <button id="homeTab" class="tabButton active" onclick="selectHomeTab()">Home Page</button>
       <div id="tabList"></div>
-      <button id="addJourneyBtn" onclick="addTabPrompt()">+ Add New Journey</button>
     </div>
+    <button onclick="addTabPrompt()" class="action" style="margin:10px;">+ Add New Journey</button>
   </div>
   <div id="rightPanel">
     <div id="homePage">
@@ -276,7 +181,7 @@
       <p>This tool lets you manage multiple flight journeys, add flights, and predict the earliest flight you can board.</p>
       <p><strong>How to use:</strong></p>
       <ol style="max-width: 600px; margin: auto; text-align: left;">
-        <li>Click <em>+ Add New Journey</em> button on the left to create a departure and arrival journey.</li>
+        <li>Click <em>+ Add New Journey</em> to create a departure and arrival journey.</li>
         <li>Select a journey tab to input flights for that route.</li>
         <li>Enter flight details and add flights to the journey.</li>
         <li>Click <em>Execute Prediction</em> to analyze flights and find your earliest flight.</li>
@@ -342,11 +247,6 @@
     return dep.trim().toLowerCase() + '→' + arr.trim().toLowerCase();
   }
 
-  function toggleTabs() {
-    const tabs = document.getElementById('tabs');
-    tabs.classList.toggle('hidden');
-  }
-
   function selectHomeTab() {
     currentJourneyKey = null;
     document.getElementById('homeTab').classList.add('active');
@@ -397,10 +297,7 @@
     btn.appendChild(closeBtn);
 
     btn.onclick = () => selectJourney(key);
-
-    // Insert new tab button before the Add Journey button
-    const addBtn = document.getElementById('addJourneyBtn');
-    tabList.insertBefore(btn, addBtn);
+    tabList.appendChild(btn);
   }
 
   function deleteJourney(key) {
