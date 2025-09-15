@@ -62,7 +62,7 @@
       user-select: none;
     }
     #tabsHeader {
-      padding: 10px 10px 5px 10px;
+      padding: 0 10px 5px 10px;
       background: #fff;
       position: sticky;
       top: 0;
@@ -85,11 +85,10 @@
       z-index: 4;
     }
     #addJourneyBtn {
-      margin: 0;
+      margin: 10px 10px 0 10px;
       padding: 10px 15px;
       cursor: pointer;
       border: 1px solid #ccc;
-      border-top: none;
       background-color: #f0f0f0;
       font-size: 14px;
       user-select: none;
@@ -102,6 +101,7 @@
       flex-direction: column;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
+      margin-top: 10px;
     }
     #tabList {
       overflow-y: auto;
@@ -240,8 +240,8 @@
         <p>This tool lets you manage multiple flight journeys, add flights, and predict the earliest flight you can board.</p>
         <p><strong>How to use:</strong></p>
         <ol style="max-width: 600px; margin: auto; text-align: left;">
-          <li>Click <em>+ Add New Journey</em> to create a departure and arrival journey.</li>
-          <li>Select a journey tab to input flights for that route.</li>
+          <li>Click <em>+ Add New Journey</em> to create a departure, arrival, and date for the journey.</li>
+          <li>Select a journey tab to input flights for that route and date.</li>
           <li>Enter flight details and add flights to the journey.</li>
           <li>Click <em>Execute Prediction</em> to analyze flights and find your earliest flight.</li>
           <li>Manage journeys by selecting or deleting tabs on the left.</li>
@@ -316,17 +316,15 @@
     }
   });
 
-  function sanitizeKey(dep, arr) {
-    return dep.trim().toLowerCase() + '→' + arr.trim().toLowerCase();
+  function formatDate(d) {
+    const day = ('0' + d.getDate()).slice(-2);
+    const month = ('0' + (d.getMonth() + 1)).slice(-2);
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
   }
 
-  function selectHomeTab() {
-    currentJourneyKey = null;
-    document.getElementById('homeTab').classList.add('active');
-    document.querySelectorAll('#tabList .tabButton').forEach(btn => btn.classList.remove('active'));
-    document.getElementById('homePage').style.display = 'block';
-    document.getElementById('flightInputSection').style.display = 'none';
-    clearRightPanel();
+  function sanitizeKey(dep, arr, date) {
+    return dep.trim().toLowerCase() + '→' + arr.trim().toLowerCase() + '→' + date;
   }
 
   function addTabPrompt() {
@@ -334,7 +332,14 @@
     if (!dep) return;
     const arr = prompt("Enter Arrival Destination for the new journey:");
     if (!arr) return;
-    const key = sanitizeKey(dep, arr);
+    let dateStr = prompt("Enter Journey Date (dd/mm/yyyy):");
+    if (!dateStr) return;
+    // Validate dd/mm/yyyy basic format
+    if (!/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+      alert("Date format invalid. Please enter the date in dd/mm/yyyy format.");
+      return;
+    }
+    const key = sanitizeKey(dep, arr, dateStr);
     if (journeys[key]) {
       alert("Journey already exists.");
       return;
@@ -342,6 +347,7 @@
     journeys[key] = {
       departure: dep.trim(),
       arrival: arr.trim(),
+      date: dateStr,
       flights: []
     };
     addTabButton(key);
@@ -355,7 +361,8 @@
     btn.dataset.key = key;
 
     const spanText = document.createElement('span');
-    spanText.textContent = journeys[key].departure + ' → ' + journeys[key].arrival;
+    const journey = journeys[key];
+    spanText.textContent = `${journey.departure} → ${journey.arrival} (${journey.date})`;
     spanText.style.flexGrow = '1';
     btn.appendChild(spanText);
 
@@ -375,7 +382,7 @@
 
   function deleteJourney(key) {
     if (!journeys[key]) return;
-    if (confirm(`Are you sure you want to delete journey "${journeys[key].departure} → ${journeys[key].arrival}"?`)) {
+    if (confirm(`Are you sure you want to delete journey "${journeys[key].departure} → ${journeys[key].arrival} (${journeys[key].date})"?`)) {
       delete journeys[key];
       const tabList = document.getElementById('tabList');
       const btn = tabList.querySelector(`.tabButton[data-key="${key}"]`);
@@ -392,14 +399,24 @@
     }
   }
 
+  function selectHomeTab() {
+    currentJourneyKey = null;
+    document.getElementById('homeTab').classList.add('active');
+    document.querySelectorAll('#tabList .tabButton').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('homePage').style.display = 'block';
+    document.getElementById('flightInputSection').style.display = 'none';
+    clearRightPanel();
+  }
+
   function selectJourney(key) {
     currentJourneyKey = key;
     document.getElementById('homeTab').classList.remove('active');
     document.querySelectorAll('#tabList .tabButton').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.key === key);
     });
-    document.getElementById('departure').value = journeys[key].departure;
-    document.getElementById('arrival').value = journeys[key].arrival;
+    const journey = journeys[key];
+    document.getElementById('departure').value = journey.departure;
+    document.getElementById('arrival').value = journey.arrival;
 
     document.getElementById('homePage').style.display = 'none';
     document.getElementById('flightInputSection').style.display = 'block';
@@ -538,7 +555,7 @@
 
     let peopleToTransfer = 0;
     let earliestFlightIndex = -1;
-    let analysisLog = `Prediction Analysis Procedure for journey ${journeys[currentJourneyKey].departure} → ${journeys[currentJourneyKey].arrival}:\n\n`;
+    let analysisLog = `Prediction Analysis Procedure for journey ${journeys[currentJourneyKey].departure} → ${journeys[currentJourneyKey].arrival} (${journeys[currentJourneyKey].date}):\n\n`;
 
     for(let i = 0; i < flights.length; i++) {
       const flight = flights[i];
@@ -578,6 +595,7 @@
     analysisDisplay.style.display = 'block';
   }
 
+  // On load, show the Home tab content only
   window.onload = () => {
     selectHomeTab();
   };
