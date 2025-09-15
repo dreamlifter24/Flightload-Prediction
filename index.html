@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Flight Load Prediciton</title>
+  <title>Flight Load Prediction</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -13,12 +13,23 @@
     }
     #tabs {
       width: 250px;
+      min-width: 250px;
       border-right: 1px solid #ccc;
       display: flex;
       flex-direction: column;
-      overflow-y: auto;
       background: #f9f9f9;
       flex-shrink: 0;
+      transition: transform 0.3s ease;
+      overflow: hidden;
+      position: relative;
+    }
+    #tabs.hidden {
+      transform: translateX(-100%);
+      position: fixed;
+      z-index: 1000;
+      height: 100vh;
+      top: 0; left: 0;
+      box-shadow: 2px 0 8px rgba(0,0,0,0.3);
     }
     #tabsHeader {
       padding: 15px;
@@ -26,11 +37,15 @@
       border-bottom: 1px solid #ccc;
       background: #fff;
       text-align: center;
+      position: relative;
+      z-index: 10;
     }
     #tabListWrapper {
       flex-grow: 1;
       display: flex;
       flex-direction: column;
+      overflow-y: auto;
+      max-height: calc(100vh - 160px); /* leave space for header and button */
     }
     #tabList {
       flex-grow: 1;
@@ -49,6 +64,9 @@
       text-align: left;
       font-size: 14px;
       box-sizing: border-box;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .tabButton.active {
       background: #e9ecef;
@@ -72,6 +90,40 @@
       top: 0;
       border-bottom: 2px solid #007bff;
       user-select: none;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #addJourneyBtn {
+      padding: 10px 15px;
+      border-top: 1px solid #ccc;
+      background: #fff;
+      cursor: pointer;
+      font-weight: bold;
+      outline: none;
+      border: none;
+      width: 100%;
+      box-sizing: border-box;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #addJourneyBtn:hover {
+      background: #e9ecef;
+    }
+    #toggleTabsBtn {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      z-index: 1100;
+      background: #007bff;
+      border: none;
+      color: white;
+      padding: 10px 12px;
+      font-size: 20px;
+      cursor: pointer;
+      border-radius: 4px;
+      display: none; /* hidden by default, shown only on small */
     }
     #rightPanel {
       flex-grow: 1;
@@ -164,16 +216,61 @@
       font-size: 1.2em;
       color: #444;
     }
+
+    /* Responsive for phones */
+    @media (max-width: 600px) {
+      body {
+        flex-direction: column;
+      }
+      #tabs {
+        width: 100%;
+        min-width: 100%;
+        height: 260px;
+        border-right: none;
+        border-bottom: 1px solid #ccc;
+        position: relative;
+        transform: none !important;
+        display: flex !important;
+      }
+      #tabs.hidden {
+        display: none !important;
+        transform: none !important;
+        position: relative !important;
+        height: 0 !important;
+      }
+      #rightPanel {
+        flex-grow: 1;
+        height: calc(100vh - 260px);
+        padding: 10px 15px;
+        overflow-y: auto;
+      }
+      #toggleTabsBtn {
+        display: block;
+      }
+      #tabListWrapper {
+        max-height: 200px;
+      }
+      #addJourneyBtn {
+        position: sticky;
+        bottom: 0;
+        background: #f8f9fa;
+        z-index: 10;
+        border-top: 1px solid #ccc;
+      }
+    }
   </style>
 </head>
 <body>
+  <button id="toggleTabsBtn" title="Toggle navigation menu" onclick="toggleTabs()">
+    &#9776;
+  </button>
   <div id="tabs">
     <div id="tabsHeader">Flight Journeys</div>
     <div id="tabListWrapper">
       <button id="homeTab" class="tabButton active" onclick="selectHomeTab()">Home Page</button>
       <div id="tabList"></div>
+      <button id="addJourneyBtn" onclick="addTabPrompt()">+ Add New Journey</button>
     </div>
-    <button onclick="addTabPrompt()" class="action" style="margin:10px;">+ Add New Journey</button>
   </div>
   <div id="rightPanel">
     <div id="homePage">
@@ -181,7 +278,7 @@
       <p>This tool lets you manage multiple flight journeys, add flights, and predict the earliest flight you can board.</p>
       <p><strong>How to use:</strong></p>
       <ol style="max-width: 600px; margin: auto; text-align: left;">
-        <li>Click <em>+ Add New Journey</em> to create a departure and arrival journey.</li>
+        <li>Click <em>+ Add New Journey</em> button on the left to create a departure and arrival journey.</li>
         <li>Select a journey tab to input flights for that route.</li>
         <li>Enter flight details and add flights to the journey.</li>
         <li>Click <em>Execute Prediction</em> to analyze flights and find your earliest flight.</li>
@@ -239,276 +336,281 @@
     </div>
   </div>
 
-<script>
-  const journeys = {};
-  let currentJourneyKey = null;
+  <script>
+    const journeys = {};
+    let currentJourneyKey = null;
 
-  function sanitizeKey(dep, arr) {
-    return dep.trim().toLowerCase() + '→' + arr.trim().toLowerCase();
-  }
-
-  function selectHomeTab() {
-    currentJourneyKey = null;
-    document.getElementById('homeTab').classList.add('active');
-    document.querySelectorAll('#tabList .tabButton').forEach(btn => btn.classList.remove('active'));
-    document.getElementById('homePage').style.display = 'block';
-    document.getElementById('flightInputSection').style.display = 'none';
-    clearRightPanel();
-  }
-
-  function addTabPrompt() {
-    const dep = prompt("Enter Departure Destination for the new journey:");
-    if (!dep) return;
-    const arr = prompt("Enter Arrival Destination for the new journey:");
-    if (!arr) return;
-    const key = sanitizeKey(dep, arr);
-    if (journeys[key]) {
-      alert("Journey already exists.");
-      return;
+    function sanitizeKey(dep, arr) {
+      return dep.trim().toLowerCase() + '→' + arr.trim().toLowerCase();
     }
-    journeys[key] = {
-      departure: dep.trim(),
-      arrival: arr.trim(),
-      flights: []
-    };
-    addTabButton(key);
-    selectJourney(key);
-  }
 
-  function addTabButton(key) {
-    const tabList = document.getElementById('tabList');
-    const btn = document.createElement('button');
-    btn.className = 'tabButton';
-    btn.dataset.key = key;
+    function toggleTabs() {
+      const tabs = document.getElementById('tabs');
+      tabs.classList.toggle('hidden');
+    }
 
-    const spanText = document.createElement('span');
-    spanText.textContent = journeys[key].departure + ' → ' + journeys[key].arrival;
-    spanText.style.flexGrow = '1';
-    btn.appendChild(spanText);
+    function selectHomeTab() {
+      currentJourneyKey = null;
+      document.getElementById('homeTab').classList.add('active');
+      document.querySelectorAll('#tabList .tabButton').forEach(btn => btn.classList.remove('active'));
+      document.getElementById('homePage').style.display = 'block';
+      document.getElementById('flightInputSection').style.display = 'none';
+      clearRightPanel();
+    }
 
-    const closeBtn = document.createElement('span');
-    closeBtn.className = 'closeBtn';
-    closeBtn.textContent = '×';
-    closeBtn.title = "Delete this journey";
-    closeBtn.onclick = (e) => {
-      e.stopPropagation();
-      deleteJourney(key);
-    };
-    btn.appendChild(closeBtn);
+    function addTabPrompt() {
+      const dep = prompt("Enter Departure Destination for the new journey:");
+      if (!dep) return;
+      const arr = prompt("Enter Arrival Destination for the new journey:");
+      if (!arr) return;
+      const key = sanitizeKey(dep, arr);
+      if (journeys[key]) {
+        alert("Journey already exists.");
+        return;
+      }
+      journeys[key] = {
+        departure: dep.trim(),
+        arrival: arr.trim(),
+        flights: []
+      };
+      addTabButton(key);
+      selectJourney(key);
+    }
 
-    btn.onclick = () => selectJourney(key);
-    tabList.appendChild(btn);
-  }
-
-  function deleteJourney(key) {
-    if (!journeys[key]) return;
-    if (confirm(`Are you sure you want to delete journey "${journeys[key].departure} → ${journeys[key].arrival}"?`)) {
-      delete journeys[key];
+    function addTabButton(key) {
       const tabList = document.getElementById('tabList');
-      const btn = tabList.querySelector(`.tabButton[data-key="${key}"]`);
-      if (btn) tabList.removeChild(btn);
+      const btn = document.createElement('button');
+      btn.className = 'tabButton';
+      btn.dataset.key = key;
 
-      if (currentJourneyKey === key) {
-        const keys = Object.keys(journeys);
-        if (keys.length > 0) {
-          selectJourney(keys[0]);
-        } else {
-          selectHomeTab();
+      const spanText = document.createElement('span');
+      spanText.textContent = journeys[key].departure + ' → ' + journeys[key].arrival;
+      spanText.style.flexGrow = '1';
+      btn.appendChild(spanText);
+
+      const closeBtn = document.createElement('span');
+      closeBtn.className = 'closeBtn';
+      closeBtn.textContent = '×';
+      closeBtn.title = "Delete this journey";
+      closeBtn.onclick = (e) => {
+        e.stopPropagation();
+        deleteJourney(key);
+      };
+      btn.appendChild(closeBtn);
+
+      btn.onclick = () => selectJourney(key);
+      tabList.appendChild(btn);
+    }
+
+    function deleteJourney(key) {
+      if (!journeys[key]) return;
+      if (confirm(`Are you sure you want to delete journey "${journeys[key].departure} → ${journeys[key].arrival}"?`)) {
+        delete journeys[key];
+        const tabList = document.getElementById('tabList');
+        const btn = tabList.querySelector(`.tabButton[data-key="${key}"]`);
+        if (btn) tabList.removeChild(btn);
+
+        if (currentJourneyKey === key) {
+          const keys = Object.keys(journeys);
+          if (keys.length > 0) {
+            selectJourney(keys[0]);
+          } else {
+            selectHomeTab();
+          }
         }
       }
     }
-  }
 
-  function selectJourney(key) {
-    currentJourneyKey = key;
-    document.getElementById('homeTab').classList.remove('active');
-    document.querySelectorAll('#tabList .tabButton').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.key === key);
-    });
-    document.getElementById('departure').value = journeys[key].departure;
-    document.getElementById('arrival').value = journeys[key].arrival;
+    function selectJourney(key) {
+      currentJourneyKey = key;
+      document.getElementById('homeTab').classList.remove('active');
+      document.querySelectorAll('#tabList .tabButton').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.key === key);
+      });
+      document.getElementById('departure').value = journeys[key].departure;
+      document.getElementById('arrival').value = journeys[key].arrival;
 
-    document.getElementById('homePage').style.display = 'none';
-    document.getElementById('flightInputSection').style.display = 'block';
+      document.getElementById('homePage').style.display = 'none';
+      document.getElementById('flightInputSection').style.display = 'block';
 
-    populateFlightsTable();
-    clearPrediction();
-    clearCurrentInputs();
-  }
-
-  function clearRightPanel() {
-    document.getElementById('departure').value = '';
-    document.getElementById('arrival').value = '';
-    document.getElementById('flightsBody').innerHTML = '';
-    document.getElementById('flightsTable').style.display = 'none';
-    clearPrediction();
-    clearCurrentInputs();
-  }
-
-  function populateFlightsTable() {
-    const flightsBody = document.getElementById('flightsBody');
-    const flightsTable = document.getElementById('flightsTable');
-    flightsBody.innerHTML = '';
-    if (!currentJourneyKey || !journeys[currentJourneyKey] || journeys[currentJourneyKey].flights.length === 0) {
-      flightsTable.style.display = 'none';
-      return;
-    }
-    flightsTable.style.display = 'table';
-
-    journeys[currentJourneyKey].flights.forEach((flight, i) => {
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td contenteditable="true">${flight.flightNumber}</td>
-        <td contenteditable="true">${flight.totalSeatsAvailable}</td>
-        <td contenteditable="true">${flight.totalSeatsBooked}</td>
-        <td>${flight.seatsRemaining ?? (flight.totalSeatsAvailable - flight.totalSeatsBooked)}</td>
-        <td contenteditable="true">${flight.peopleQueueingBefore}</td>
-        <td>
-          <select class="editDropdown">
-            <option value="Yes" ${flight.isTargeted ? "selected" : ""}>Yes</option>
-            <option value="No" ${!flight.isTargeted ? "selected" : ""}>No</option>
-          </select>
-        </td>
-        <td>${flight.staffRolled || 0}</td>
-      `;
-      flightsBody.appendChild(row);
-    });
-  }
-
-  function clearCurrentInputs() {
-    document.getElementById('flightNumber').value = '';
-    document.getElementById('totalSeatsAvailable').value = '';
-    document.getElementById('totalSeatsBooked').value = '';
-    document.getElementById('queueInput').value = '';
-    document.getElementById('targetFlight').checked = false;
-  }
-
-  function addFlightToCurrentJourney() {
-    if (!currentJourneyKey) {
-      alert("Please add and select a journey tab first (departure and arrival).");
-      return;
-    }
-    const flightNumber = document.getElementById('flightNumber').value.trim();
-    const totalSeatsAvailable = parseInt(document.getElementById('totalSeatsAvailable').value.trim());
-    const totalSeatsBooked = parseInt(document.getElementById('totalSeatsBooked').value.trim());
-    const queueNumber = parseInt(document.getElementById('queueInput').value.trim());
-    const targeted = document.getElementById('targetFlight').checked;
-
-    if (!flightNumber) {
-      alert('Please enter the flight number.');
-      return;
-    }
-    if (isNaN(totalSeatsAvailable) || totalSeatsAvailable < 0) {
-      alert('Please enter a valid non-negative number for Total Seats Available.');
-      return;
-    }
-    if (isNaN(totalSeatsBooked) || totalSeatsBooked < 0) {
-      alert('Please enter a valid non-negative number for Total Seats Booked.');
-      return;
-    }
-    if (isNaN(queueNumber) || queueNumber < 0) {
-      alert('Please enter a valid non-negative number for the number of people queueing before you.');
-      return;
+      populateFlightsTable();
+      clearPrediction();
+      clearCurrentInputs();
     }
 
-    journeys[currentJourneyKey].flights.push({
-      flightNumber,
-      totalSeatsAvailable,
-      totalSeatsBooked,
-      seatsRemaining: totalSeatsAvailable - totalSeatsBooked,
-      peopleQueueingBefore: queueNumber,
-      isTargeted: targeted,
-      staffRolled: 0
-    });
-    populateFlightsTable();
-    clearCurrentInputs();
-    clearPrediction();
-  }
-
-  function clearPrediction() {
-    const rows = document.querySelectorAll('#flightsBody tr');
-    rows.forEach(row => {
-      row.classList.remove('highlight');
-    });
-    const pred = document.getElementById('predictionResult');
-    pred.style.display = 'none';
-    pred.textContent = '';
-    const analysis = document.getElementById('analysisProcedure');
-    analysis.style.display = 'none';
-    analysis.textContent = '';
-  }
-
-  function executePrediction() {
-    if (!currentJourneyKey || !journeys[currentJourneyKey]) {
-      alert("Please select a journey before executing prediction.");
-      return;
+    function clearRightPanel() {
+      document.getElementById('departure').value = '';
+      document.getElementById('arrival').value = '';
+      document.getElementById('flightsBody').innerHTML = '';
+      document.getElementById('flightsTable').style.display = 'none';
+      clearPrediction();
+      clearCurrentInputs();
     }
-    clearPrediction();
 
-    const flights = journeys[currentJourneyKey].flights;
+    function populateFlightsTable() {
+      const flightsBody = document.getElementById('flightsBody');
+      const flightsTable = document.getElementById('flightsTable');
+      flightsBody.innerHTML = '';
+      if (!currentJourneyKey || !journeys[currentJourneyKey] || journeys[currentJourneyKey].flights.length === 0) {
+        flightsTable.style.display = 'none';
+        return;
+      }
+      flightsTable.style.display = 'table';
 
-    const rows = document.querySelectorAll('#flightsBody tr');
-    rows.forEach((row, i) => {
-      let cells = row.cells;
-      flights[i].flightNumber = cells[0].textContent.trim();
-      flights[i].totalSeatsAvailable = parseInt(cells[1].textContent) || 0;
-      flights[i].totalSeatsBooked = parseInt(cells[2].textContent) || 0;
-      flights[i].seatsRemaining = flights[i].totalSeatsAvailable - flights[i].totalSeatsBooked;
-      flights[i].peopleQueueingBefore = parseInt(cells[4].textContent) || 0;
-      const select = cells[5].querySelector('select.editDropdown');
-      flights[i].isTargeted = select && select.value.toLowerCase() === 'yes';
-      flights[i].staffRolled = 0;
-      cells[3].textContent = flights[i].seatsRemaining;
-      cells[6].textContent = 0;
-      row.classList.remove('highlight');
-    });
+      journeys[currentJourneyKey].flights.forEach((flight, i) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td contenteditable="true">${flight.flightNumber}</td>
+          <td contenteditable="true">${flight.totalSeatsAvailable}</td>
+          <td contenteditable="true">${flight.totalSeatsBooked}</td>
+          <td>${flight.seatsRemaining ?? (flight.totalSeatsAvailable - flight.totalSeatsBooked)}</td>
+          <td contenteditable="true">${flight.peopleQueueingBefore}</td>
+          <td>
+            <select class="editDropdown">
+              <option value="Yes" ${flight.isTargeted ? "selected" : ""}>Yes</option>
+              <option value="No" ${!flight.isTargeted ? "selected" : ""}>No</option>
+            </select>
+          </td>
+          <td>${flight.staffRolled || 0}</td>
+        `;
+        flightsBody.appendChild(row);
+      });
+    }
 
-    let peopleToTransfer = 0;
-    let earliestFlightIndex = -1;
-    let analysisLog = `Prediction Analysis Procedure for journey ${journeys[currentJourneyKey].departure} → ${journeys[currentJourneyKey].arrival}:\n\n`;
+    function clearCurrentInputs() {
+      document.getElementById('flightNumber').value = '';
+      document.getElementById('totalSeatsAvailable').value = '';
+      document.getElementById('totalSeatsBooked').value = '';
+      document.getElementById('queueInput').value = '';
+      document.getElementById('targetFlight').checked = false;
+    }
 
-    for(let i = 0; i < flights.length; i++) {
-      const flight = flights[i];
-      let queueingBefore = flight.peopleQueueingBefore + peopleToTransfer;
-      analysisLog += `Flight ${i + 1} (${flight.flightNumber}):\n`;
-      analysisLog += `  Seats Remaining: ${flight.seatsRemaining}\n`;
-      analysisLog += `  People Queueing Before (including transferred): ${queueingBefore}\n`;
+    function addFlightToCurrentJourney() {
+      if (!currentJourneyKey) {
+        alert("Please add and select a journey tab first (departure and arrival).");
+        return;
+      }
+      const flightNumber = document.getElementById('flightNumber').value.trim();
+      const totalSeatsAvailable = parseInt(document.getElementById('totalSeatsAvailable').value.trim());
+      const totalSeatsBooked = parseInt(document.getElementById('totalSeatsBooked').value.trim());
+      const queueNumber = parseInt(document.getElementById('queueInput').value.trim());
+      const targeted = document.getElementById('targetFlight').checked;
 
-      if (flight.seatsRemaining > queueingBefore) {
-        peopleToTransfer = 0;
-        analysisLog += `  Decision: Seats remaining > people queueing, no transfer needed.\n`;
+      if (!flightNumber) {
+        alert('Please enter the flight number.');
+        return;
+      }
+      if (isNaN(totalSeatsAvailable) || totalSeatsAvailable < 0) {
+        alert('Please enter a valid non-negative number for Total Seats Available.');
+        return;
+      }
+      if (isNaN(totalSeatsBooked) || totalSeatsBooked < 0) {
+        alert('Please enter a valid non-negative number for Total Seats Booked.');
+        return;
+      }
+      if (isNaN(queueNumber) || queueNumber < 0) {
+        alert('Please enter a valid non-negative number for the number of people queueing before you.');
+        return;
+      }
+
+      journeys[currentJourneyKey].flights.push({
+        flightNumber,
+        totalSeatsAvailable,
+        totalSeatsBooked,
+        seatsRemaining: totalSeatsAvailable - totalSeatsBooked,
+        peopleQueueingBefore: queueNumber,
+        isTargeted: targeted,
+        staffRolled: 0
+      });
+      populateFlightsTable();
+      clearCurrentInputs();
+      clearPrediction();
+    }
+
+    function clearPrediction() {
+      const rows = document.querySelectorAll('#flightsBody tr');
+      rows.forEach(row => {
+        row.classList.remove('highlight');
+      });
+      const pred = document.getElementById('predictionResult');
+      pred.style.display = 'none';
+      pred.textContent = '';
+      const analysis = document.getElementById('analysisProcedure');
+      analysis.style.display = 'none';
+      analysis.textContent = '';
+    }
+
+    function executePrediction() {
+      if (!currentJourneyKey || !journeys[currentJourneyKey]) {
+        alert("Please select a journey before executing prediction.");
+        return;
+      }
+      clearPrediction();
+
+      const flights = journeys[currentJourneyKey].flights;
+
+      const rows = document.querySelectorAll('#flightsBody tr');
+      rows.forEach((row, i) => {
+        let cells = row.cells;
+        flights[i].flightNumber = cells[0].textContent.trim();
+        flights[i].totalSeatsAvailable = parseInt(cells[1].textContent) || 0;
+        flights[i].totalSeatsBooked = parseInt(cells[2].textContent) || 0;
+        flights[i].seatsRemaining = flights[i].totalSeatsAvailable - flights[i].totalSeatsBooked;
+        flights[i].peopleQueueingBefore = parseInt(cells[4].textContent) || 0;
+        const select = cells[5].querySelector('select.editDropdown');
+        flights[i].isTargeted = select && select.value.toLowerCase() === 'yes';
+        flights[i].staffRolled = 0;
+        cells[3].textContent = flights[i].seatsRemaining;
+        cells[6].textContent = 0;
+        row.classList.remove('highlight');
+      });
+
+      let peopleToTransfer = 0;
+      let earliestFlightIndex = -1;
+      let analysisLog = `Prediction Analysis Procedure for journey ${journeys[currentJourneyKey].departure} → ${journeys[currentJourneyKey].arrival}:\n\n`;
+
+      for(let i = 0; i < flights.length; i++) {
+        const flight = flights[i];
+        let queueingBefore = flight.peopleQueueingBefore + peopleToTransfer;
+        analysisLog += `Flight ${i + 1} (${flight.flightNumber}):\n`;
+        analysisLog += `  Seats Remaining: ${flight.seatsRemaining}\n`;
+        analysisLog += `  People Queueing Before (including transferred): ${queueingBefore}\n`;
+
+        if (flight.seatsRemaining > queueingBefore) {
+          peopleToTransfer = 0;
+          analysisLog += `  Decision: Seats remaining > people queueing, no transfer needed.\n`;
+        } else {
+          peopleToTransfer = queueingBefore - flight.seatsRemaining;
+          analysisLog += `  Decision: Seats remaining ≤ people queueing, transferring ${peopleToTransfer} people to next flight.\n`;
+        }
+        flight.staffRolled = peopleToTransfer;
+        rows[i].cells[6].textContent = peopleToTransfer;
+
+        if (peopleToTransfer === 0 && earliestFlightIndex === -1) {
+          earliestFlightIndex = i;
+          analysisLog += `  Conclusion: Earliest flight you can get on found: Flight ${i + 1} (${flight.flightNumber}).\n`;
+          break;
+        }
+        analysisLog += '\n';
+      }
+
+      const predictionResult = document.getElementById('predictionResult');
+      const analysisDisplay = document.getElementById('analysisProcedure');
+      if (earliestFlightIndex === -1) {
+        predictionResult.textContent = 'No flight can accommodate you based on the provided data.';
       } else {
-        peopleToTransfer = queueingBefore - flight.seatsRemaining;
-        analysisLog += `  Decision: Seats remaining ≤ people queueing, transferring ${peopleToTransfer} people to next flight.\n`;
+        rows[earliestFlightIndex].classList.add('highlight');
+        predictionResult.textContent = `Earliest flight you can get on is: ${flights[earliestFlightIndex].flightNumber}`;
       }
-      flight.staffRolled = peopleToTransfer;
-      rows[i].cells[6].textContent = peopleToTransfer;
-
-      if (peopleToTransfer === 0 && earliestFlightIndex === -1) {
-        earliestFlightIndex = i;
-        analysisLog += `  Conclusion: Earliest flight you can get on found: Flight ${i + 1} (${flight.flightNumber}).\n`;
-        break;
-      }
-      analysisLog += '\n';
+      predictionResult.style.display = 'block';
+      analysisDisplay.textContent = analysisLog;
+      analysisDisplay.style.display = 'block';
     }
 
-    const predictionResult = document.getElementById('predictionResult');
-    const analysisDisplay = document.getElementById('analysisProcedure');
-    if (earliestFlightIndex === -1) {
-      predictionResult.textContent = 'No flight can accommodate you based on the provided data.';
-    } else {
-      rows[earliestFlightIndex].classList.add('highlight');
-      predictionResult.textContent = `Earliest flight you can get on is: ${flights[earliestFlightIndex].flightNumber}`;
-    }
-    predictionResult.style.display = 'block';
-    analysisDisplay.textContent = analysisLog;
-    analysisDisplay.style.display = 'block';
-  }
-
-  window.onload = () => {
-    selectHomeTab();
-  };
-</script>
+    // Show the Home tab on load
+    window.onload = () => {
+      selectHomeTab();
+    };
+  </script>
 </body>
 </html>
-
