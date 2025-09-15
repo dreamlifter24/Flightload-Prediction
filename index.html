@@ -9,7 +9,7 @@
       height: 100%;
       margin: 0;
       font-family: Arial, sans-serif;
-      overflow: hidden; /* prevent overall page scroll */
+      overflow: hidden; /* Prevent overall scroll */
     }
     #container {
       display: flex;
@@ -24,7 +24,42 @@
       background: #f9f9f9;
       flex-shrink: 0;
       transition: width 0.3s ease;
-      overflow: hidden; /* hide horizontal overflow */
+      height: 100vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      box-sizing: border-box;
+      padding-top: 48px; /* space for toggle button */
+      position: relative;
+    }
+    #rightPanel {
+      flex-grow: 1;
+      padding: 20px;
+      height: 100vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      transition: margin-left 0.3s ease;
+      box-sizing: border-box;
+    }
+    #rightPanel.fullWidth {
+      margin-left: 0;
+    }
+    #hideSidebarBtn {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      width: 36px;
+      height: 36px;
+      z-index: 1000;
+      background: #007bff;
+      border: none;
+      color: white;
+      font-weight: bold;
+      font-size: 24px;
+      line-height: 30px;
+      border-radius: 6px;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      user-select: none;
     }
     #tabsHeader {
       padding: 15px;
@@ -32,31 +67,18 @@
       border-bottom: 1px solid #ccc;
       background: #fff;
       text-align: center;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    #hideSidebarBtn {
-      background: #007bff;
-      border: none;
-      color: white;
-      font-weight: bold;
-      font-size: 18px;
-      line-height: 18px;
-      width: 24px;
-      height: 24px;
-      cursor: pointer;
-      border-radius: 4px;
+      position: sticky;
+      top: 0;
+      z-index: 1;
     }
     #tabListWrapper {
       flex-grow: 1;
       display: flex;
       flex-direction: column;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
     }
     #tabList {
-      flex-grow: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
     .tabButton {
       display: flex;
@@ -94,16 +116,7 @@
       top: 0;
       border-bottom: 2px solid #007bff;
       user-select: none;
-    }
-    #rightPanel {
-      flex-grow: 1;
-      padding: 20px;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-      transition: margin-left 0.3s ease;
-    }
-    #rightPanel.fullWidth {
-      margin-left: 0;
+      z-index: 2;
     }
     h2 {
       margin-top: 0;
@@ -193,12 +206,10 @@
   </style>
 </head>
 <body>
+  <button id="hideSidebarBtn" title="Toggle Navigation">&#9776;</button>
   <div id="container">
     <div id="tabsContainer">
-      <div id="tabsHeader">
-        Flight Journeys
-        <button id="hideSidebarBtn" title="Toggle Navigation">&#9776;</button>
-      </div>
+      <div id="tabsHeader">Flight Journeys</div>
       <div id="tabListWrapper">
         <button id="homeTab" class="tabButton active" onclick="selectHomeTab()">Home Page</button>
         <div id="tabList"></div>
@@ -281,11 +292,9 @@
     if (tabsContainer.style.width === '0px' || tabsContainer.style.width === '0') {
       tabsContainer.style.width = '250px';
       rightPanel.classList.remove('fullWidth');
-      hideSidebarBtn.textContent = '☰';
     } else {
       tabsContainer.style.width = '0';
       rightPanel.classList.add('fullWidth');
-      hideSidebarBtn.textContent = '☰'; // or any other icon if preferred
     }
   });
 
