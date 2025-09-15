@@ -3,22 +3,28 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Flight Journeys with Editable Targeted Flight Dropdown</title>
+  <title>Flight Journeys with Scroll and Toggle Sidebar</title>
   <style>
-    body {
+    html, body {
+      height: 100%;
+      margin: 0;
       font-family: Arial, sans-serif;
-      margin: 0; padding: 0; height: 100vh;
-      display: flex; flex-direction: row;
+      overflow: hidden; /* prevent overall page scroll */
+    }
+    #container {
+      display: flex;
+      height: 100vh;
       overflow: hidden;
     }
-    #tabs {
+    #tabsContainer {
       width: 250px;
       border-right: 1px solid #ccc;
       display: flex;
       flex-direction: column;
-      overflow-y: auto;
       background: #f9f9f9;
       flex-shrink: 0;
+      transition: width 0.3s ease;
+      overflow: hidden; /* hide horizontal overflow */
     }
     #tabsHeader {
       padding: 15px;
@@ -26,15 +32,31 @@
       border-bottom: 1px solid #ccc;
       background: #fff;
       text-align: center;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    #hideSidebarBtn {
+      background: #007bff;
+      border: none;
+      color: white;
+      font-weight: bold;
+      font-size: 18px;
+      line-height: 18px;
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+      border-radius: 4px;
     }
     #tabListWrapper {
       flex-grow: 1;
       display: flex;
       flex-direction: column;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
     #tabList {
       flex-grow: 1;
-      overflow-y: auto;
     }
     .tabButton {
       display: flex;
@@ -77,6 +99,11 @@
       flex-grow: 1;
       padding: 20px;
       overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      transition: margin-left 0.3s ease;
+    }
+    #rightPanel.fullWidth {
+      margin-left: 0;
     }
     h2 {
       margin-top: 0;
@@ -166,81 +193,101 @@
   </style>
 </head>
 <body>
-  <div id="tabs">
-    <div id="tabsHeader">Flight Journeys</div>
-    <div id="tabListWrapper">
-      <button id="homeTab" class="tabButton active" onclick="selectHomeTab()">Home Page</button>
-      <div id="tabList"></div>
+  <div id="container">
+    <div id="tabsContainer">
+      <div id="tabsHeader">
+        Flight Journeys
+        <button id="hideSidebarBtn" title="Toggle Navigation">&#9776;</button>
+      </div>
+      <div id="tabListWrapper">
+        <button id="homeTab" class="tabButton active" onclick="selectHomeTab()">Home Page</button>
+        <div id="tabList"></div>
+      </div>
+      <button onclick="addTabPrompt()" class="action" style="margin:10px;">+ Add New Journey</button>
     </div>
-    <button onclick="addTabPrompt()" class="action" style="margin:10px;">+ Add New Journey</button>
-  </div>
-  <div id="rightPanel">
-    <div id="homePage">
-      <h2>Welcome to Flight Journeys Prediction Tool</h2>
-      <p>This tool lets you manage multiple flight journeys, add flights, and predict the earliest flight you can board.</p>
-      <p><strong>How to use:</strong></p>
-      <ol style="max-width: 600px; margin: auto; text-align: left;">
-        <li>Click <em>+ Add New Journey</em> to create a departure and arrival journey.</li>
-        <li>Select a journey tab to input flights for that route.</li>
-        <li>Enter flight details and add flights to the journey.</li>
-        <li>Click <em>Execute Prediction</em> to analyze flights and find your earliest flight.</li>
-        <li>Manage journeys by selecting or deleting tabs on the left.</li>
-      </ol>
-    </div>
-    <div id="flightInputSection" style="display:none;">
-      <h2>Flight Details Input</h2>
-      <form id="flightForm" onsubmit="return false;">
-        <label for="flightNumber">Flight Number:</label>
-        <input type="text" id="flightNumber" placeholder="e.g. AB1234" required />
+    <div id="rightPanel">
+      <div id="homePage">
+        <h2>Welcome to Flight Journeys Prediction Tool</h2>
+        <p>This tool lets you manage multiple flight journeys, add flights, and predict the earliest flight you can board.</p>
+        <p><strong>How to use:</strong></p>
+        <ol style="max-width: 600px; margin: auto; text-align: left;">
+          <li>Click <em>+ Add New Journey</em> to create a departure and arrival journey.</li>
+          <li>Select a journey tab to input flights for that route.</li>
+          <li>Enter flight details and add flights to the journey.</li>
+          <li>Click <em>Execute Prediction</em> to analyze flights and find your earliest flight.</li>
+          <li>Manage journeys by selecting or deleting tabs on the left.</li>
+        </ol>
+      </div>
+      <div id="flightInputSection" style="display:none;">
+        <h2>Flight Details Input</h2>
+        <form id="flightForm" onsubmit="return false;">
+          <label for="flightNumber">Flight Number:</label>
+          <input type="text" id="flightNumber" placeholder="e.g. AB1234" required />
 
-        <label for="departure">Departure Destination:</label>
-        <input type="text" id="departure" readonly />
+          <label for="departure">Departure Destination:</label>
+          <input type="text" id="departure" readonly />
 
-        <label for="arrival">Arrival Destination:</label>
-        <input type="text" id="arrival" readonly />
+          <label for="arrival">Arrival Destination:</label>
+          <input type="text" id="arrival" readonly />
 
-        <label for="totalSeatsAvailable">Total Seats Available:</label>
-        <input type="number" id="totalSeatsAvailable" min="0" placeholder="e.g. 150" required />
+          <label for="totalSeatsAvailable">Total Seats Available:</label>
+          <input type="number" id="totalSeatsAvailable" min="0" placeholder="e.g. 150" required />
 
-        <label for="totalSeatsBooked">Total Seats Booked:</label>
-        <input type="number" id="totalSeatsBooked" min="0" placeholder="e.g. 120" required />
+          <label for="totalSeatsBooked">Total Seats Booked:</label>
+          <input type="number" id="totalSeatsBooked" min="0" placeholder="e.g. 120" required />
 
-        <label for="queueInput">Number of People Queueing Before You:</label>
-        <input type="number" id="queueInput" min="0" placeholder="e.g. 3" required />
+          <label for="queueInput">Number of People Queueing Before You:</label>
+          <input type="number" id="queueInput" min="0" placeholder="e.g. 3" required />
 
-        <label>
-          <input type="checkbox" id="targetFlight" />
-          Is this your targeted flight?
-        </label>
+          <label>
+            <input type="checkbox" id="targetFlight" />
+            Is this your targeted flight?
+          </label>
 
-        <button class="action" onclick="addFlightToCurrentJourney()">Add Flight</button>
-        <button class="action" onclick="clearCurrentInputs()">Clear Inputs</button>
-        <button class="action" onclick="executePrediction()">Execute Prediction</button>
-      </form>
+          <button class="action" onclick="addFlightToCurrentJourney()">Add Flight</button>
+          <button class="action" onclick="clearCurrentInputs()">Clear Inputs</button>
+          <button class="action" onclick="executePrediction()">Execute Prediction</button>
+        </form>
 
-      <table id="flightsTable" style="display:none;">
-        <thead>
-          <tr>
-            <th>Flight Number</th>
-            <th>Total Seats Available</th>
-            <th>Total Seats Booked</th>
-            <th>Seats Remaining</th>
-            <th>People Queueing Before</th>
-            <th>Targeted Flight</th>
-            <th>Staff Rolled to Next Flight</th>
-          </tr>
-        </thead>
-        <tbody id="flightsBody"></tbody>
-      </table>
+        <table id="flightsTable" style="display:none;">
+          <thead>
+            <tr>
+              <th>Flight Number</th>
+              <th>Total Seats Available</th>
+              <th>Total Seats Booked</th>
+              <th>Seats Remaining</th>
+              <th>People Queueing Before</th>
+              <th>Targeted Flight</th>
+              <th>Staff Rolled to Next Flight</th>
+            </tr>
+          </thead>
+          <tbody id="flightsBody"></tbody>
+        </table>
 
-      <div id="predictionResult"></div>
-      <pre id="analysisProcedure"></pre>
+        <div id="predictionResult"></div>
+        <pre id="analysisProcedure"></pre>
+      </div>
     </div>
   </div>
 
 <script>
   const journeys = {};
   let currentJourneyKey = null;
+  const tabsContainer = document.getElementById('tabsContainer');
+  const rightPanel = document.getElementById('rightPanel');
+  const hideSidebarBtn = document.getElementById('hideSidebarBtn');
+
+  hideSidebarBtn.addEventListener('click', () => {
+    if (tabsContainer.style.width === '0px' || tabsContainer.style.width === '0') {
+      tabsContainer.style.width = '250px';
+      rightPanel.classList.remove('fullWidth');
+      hideSidebarBtn.textContent = '☰';
+    } else {
+      tabsContainer.style.width = '0';
+      rightPanel.classList.add('fullWidth');
+      hideSidebarBtn.textContent = '☰'; // or any other icon if preferred
+    }
+  });
 
   function sanitizeKey(dep, arr) {
     return dep.trim().toLowerCase() + '→' + arr.trim().toLowerCase();
@@ -504,6 +551,7 @@
     analysisDisplay.style.display = 'block';
   }
 
+  // On load, show the Home tab content only
   window.onload = () => {
     selectHomeTab();
   };
