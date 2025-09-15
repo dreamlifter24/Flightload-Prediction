@@ -3,13 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Flight Load Prediction</title>
+  <title>Flight Journeys with Date Picker and Scroll Toggle Sidebar</title>
   <style>
+    /* Styles same as previous with added styling for date input */
     html, body {
       height: 100%;
       margin: 0;
       font-family: Arial, sans-serif;
-      overflow: hidden; /* Prevent overall scroll */
+      overflow: hidden;
     }
     #container {
       display: flex;
@@ -28,7 +29,7 @@
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
       box-sizing: border-box;
-      padding-top: 48px; /* space for toggle button */
+      padding-top: 48px;
       position: relative;
     }
     #rightPanel {
@@ -321,24 +322,10 @@
   });
 
   function formatDate(d) {
-    // format  yyyy-mm-dd to dd/mm/yyyy
     const day = ('0' + d.getDate()).slice(-2);
     const month = ('0' + (d.getMonth() + 1)).slice(-2);
     const year = d.getFullYear();
     return `${day}/${month}/${year}`;
-  }
-
-  function formatDateFromISO(iso) {
-    if (!iso) return '';
-    const d = new Date(iso);
-    return formatDate(d);
-  }
-
-  function parseDateToISO(str) {
-    // from dd/mm/yyyy to yyyy-mm-dd for input type=date value
-    const parts = str.split('/');
-    if (parts.length !== 3) return '';
-    return `${parts[2]}-${parts[1]}-${parts[0]}`;
   }
 
   function sanitizeKey(dep, arr, date) {
@@ -484,6 +471,12 @@
     clearRightPanel();
   }
 
+  function parseDateToISO(str) {
+    const parts = str.split('/');
+    if (parts.length !== 3) return '';
+    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+  }
+
   function selectJourney(key) {
     currentJourneyKey = key;
     document.getElementById('homeTab').classList.remove('active');
@@ -499,16 +492,6 @@
     document.getElementById('flightInputSection').style.display = 'block';
 
     populateFlightsTable();
-    clearPrediction();
-    clearCurrentInputs();
-  }
-
-  function clearRightPanel() {
-    document.getElementById('departure').value = '';
-    document.getElementById('arrival').value = '';
-    document.getElementById('dateInput').value = '';
-    document.getElementById('flightsBody').innerHTML = '';
-    document.getElementById('flightsTable').style.display = 'none';
     clearPrediction();
     clearCurrentInputs();
   }
@@ -631,11 +614,20 @@
       row.classList.remove('highlight');
     });
 
+    // Find earliest flight that is not earlier than targeted flight
+    // Find index of targeted flight first
+    const targetedIndex = flights.findIndex(f => f.isTargeted);
+    if(targetedIndex === -1) {
+      alert("Please set one targeted flight and rerun the prediction.");
+      return;
+    }
+
     let peopleToTransfer = 0;
     let earliestFlightIndex = -1;
     let analysisLog = `Prediction Analysis Procedure for journey ${journeys[currentJourneyKey].departure} → ${journeys[currentJourneyKey].arrival} (${journeys[currentJourneyKey].date}):\n\n`;
 
-    for(let i = 0; i < flights.length; i++) {
+    // Start checking from targeted flight onwards
+    for(let i = targetedIndex; i < flights.length; i++) {
       const flight = flights[i];
       let queueingBefore = flight.peopleQueueingBefore + peopleToTransfer;
       analysisLog += `Flight ${i + 1} (${flight.flightNumber}):\n`;
@@ -673,12 +665,6 @@
     analysisDisplay.style.display = 'block';
   }
 
-  function parseDateToISO(str) {
-    const parts = str.split('/');
-    if (parts.length !== 3) return '';
-    return `${parts[2]}-${parts[1]}-${parts[0]}`;
-  }
-
   // On load, show the Home tab content only
   window.onload = () => {
     selectHomeTab();
@@ -686,4 +672,3 @@
 </script>
 </body>
 </html>
-
