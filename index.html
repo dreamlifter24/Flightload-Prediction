@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Flight Load Prediction</title>
   <style>
-    /* ~~~ (Previous CSS same as before) ~~~ */
     html, body {
       height: 100%;
       margin: 0;
@@ -221,7 +220,7 @@
   </style>
 </head>
 <body>
-  <button id="hideSidebarBtn" title="Toggle Navigation">&#9776;</button>
+  <button id="hideSidebarBtn" title="Toggle Navigation">☰</button>
   <div id="container">
     <div id="tabsContainer">
       <div id="tabsHeader">
@@ -307,6 +306,18 @@
   const rightPanel = document.getElementById('rightPanel');
   const hideSidebarBtn = document.getElementById('hideSidebarBtn');
 
+  // ---- LOCAL STORAGE HANDLERS ----
+  function saveData() {
+    localStorage.setItem('flightJourneysData', JSON.stringify(journeys));
+  }
+  function loadData() {
+    const data = localStorage.getItem('flightJourneysData');
+    if (data) {
+      Object.assign(journeys, JSON.parse(data));
+    }
+  }
+  // ---------------------------------
+
   hideSidebarBtn.addEventListener('click', () => {
     if (tabsContainer.style.width === '0px' || tabsContainer.style.width === '0') {
       tabsContainer.style.width = '250px';
@@ -317,7 +328,6 @@
     }
   });
 
-  // Date formatting helpers
   function formatDate(d) {
     const day = ('0' + d.getDate()).slice(-2);
     const month = ('0' + (d.getMonth() + 1)).slice(-2);
@@ -410,6 +420,7 @@
       date: dateStr,
       flights: []
     };
+    saveData();
     addTabButton(key);
     selectJourney(key);
   }
@@ -444,6 +455,7 @@
     if (!journeys[key]) return;
     if (confirm(`Are you sure you want to delete journey "${journeys[key].departure} → ${journeys[key].arrival} (${journeys[key].date})"?`)) {
       delete journeys[key];
+      saveData();
       const tabList = document.getElementById('tabList');
       const btn = tabList.querySelector(`.tabButton[data-key="${key}"]`);
       if (btn) tabList.removeChild(btn);
@@ -568,6 +580,7 @@
       isTargeted: targeted,
       staffRolled: 0
     });
+    saveData();
     populateFlightsTable();
     clearCurrentInputs();
     clearPrediction();
@@ -596,7 +609,7 @@
     const flights = journeys[currentJourneyKey].flights;
     const rows = document.querySelectorAll('#flightsBody tr');
 
-    // Sync flight data and targeted flight state from editable UI
+    // Sync and persist flight data after any table edit or select change
     rows.forEach((row, i) => {
       const cells = row.cells;
       flights[i].flightNumber = cells[0].textContent.trim();
@@ -611,6 +624,7 @@
       cells[6].textContent = 0;
       row.classList.remove('highlight');
     });
+    saveData();
 
     // Find position of first targeted flight
     const firstTargetedIndex = flights.findIndex(f => f.isTargeted);
@@ -623,8 +637,7 @@
     let earliestFlightIndex = -1;
     let analysisLog = `Prediction Analysis Procedure for journey ${journeys[currentJourneyKey].departure} → ${journeys[currentJourneyKey].arrival} (${journeys[currentJourneyKey].date}):\n\n`;
 
-    // Process all flights, considering transferred staff each step,
-    // but only accept earliest flight at or after the targeted flight position
+    // Process all flights, staff rolling forward, but earliest you can board is targeted or after
     for(let i = 0; i < flights.length; i++) {
       const flight = flights[i];
       let queueingBefore = flight.peopleQueueingBefore + peopleToTransfer;
@@ -644,7 +657,6 @@
       rows[i].cells[6].textContent = peopleToTransfer;
 
       if(peopleToTransfer === 0 && earliestFlightIndex === -1 && i >= firstTargetedIndex) {
-        // Earliest flight must be at or after targeted flight
         earliestFlightIndex = i;
         analysisLog += `  Conclusion: Earliest flight you can get on found: Flight ${i+1} (${flight.flightNumber}).\n`;
         break;
@@ -666,10 +678,33 @@
     analysisDisplay.style.display = 'block';
   }
 
+  document.addEventListener('change', e => {
+    if (e.target.classList.contains('editDropdown')) {
+      executePrediction(); // Save and update right away for dropdown changes
+    }
+  });
+
+  function restoreTabs() {
+    const keys = Object.keys(journeys);
+    keys.forEach(addTabButton);
+    if(keys.length > 0) selectJourney(keys[0]);
+    else selectHomeTab();
+  }
+
+  function clearRightPanel() {
+    document.getElementById('departure').value = '';
+    document.getElementById('arrival').value = '';
+    document.getElementById('dateInput').value = '';
+    document.getElementById('flightsBody').innerHTML = '';
+    document.getElementById('flightsTable').style.display = 'none';
+    clearPrediction();
+    clearCurrentInputs();
+  }
+
   window.onload = () => {
-    selectHomeTab();
+    loadData();
+    restoreTabs();
   };
 </script>
 </body>
 </html>
-
