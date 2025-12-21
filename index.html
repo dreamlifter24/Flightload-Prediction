@@ -1,710 +1,305 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Flight Load Prediction</title>
-  <style>
-    html, body {
-      height: 100%;
-      margin: 0;
-      font-family: Arial, sans-serif;
-      overflow: hidden;
-    }
-    #container {
-      display: flex;
-      height: 100vh;
-      overflow: hidden;
-    }
-    #tabsContainer {
-      width: 250px;
-      border-right: 1px solid #ccc;
-      display: flex;
-      flex-direction: column;
-      background: #f9f9f9;
-      flex-shrink: 0;
-      transition: width 0.3s ease;
-      height: 100vh;
-      overflow-y: auto;
-      padding-top: 48px;
-      position: relative;
-      box-sizing: border-box;
-    }
-    #rightPanel {
-      flex-grow: 1;
-      padding: 20px;
-      height: 100vh;
-      overflow-y: auto;
-      transition: margin-left 0.3s ease;
-      box-sizing: border-box;
-    }
-    #rightPanel.fullWidth {
-      margin-left: 0;
-    }
-    #hideSidebarBtn {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      width: 36px;
-      height: 36px;
-      z-index: 1000;
-      background: #007bff;
-      border: none;
-      color: white;
-      font-weight: bold;
-      font-size: 24px;
-      line-height: 30px;
-      border-radius: 6px;
-      cursor: pointer;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-      user-select: none;
-    }
-    #tabsHeader {
-      padding: 0 10px 5px 10px;
-      background: #fff;
-      position: sticky;
-      top: 0;
-      z-index: 3;
-      border-bottom: 1px solid #ccc;
-      display: flex;
-      flex-direction: column;
-    }
-    #homeTab {
-      margin: 0;
-      background: #dae0e5;
-      font-weight: bold;
-      cursor: default;
-      border-bottom: none;
-      padding: 12px 15px;
-      text-align: left;
-      user-select: none;
-      border: 1px solid #ccc;
-      border-bottom: none;
-      z-index: 4;
-    }
-    #addJourneyBtn {
-      margin: 10px 10px;
-      padding: 10px 15px;
-      cursor: pointer;
-      border: 1px solid #ccc;
-      background-color: #f0f0f0;
-      font-size: 14px;
-      user-select: none;
-      text-align: left;
-      z-index: 4;
-    }
-    #tabListWrapper {
-      flex-grow: 1;
-      display: flex;
-      flex-direction: column;
-      overflow-y: auto;
-      margin-top: 10px;
-    }
-    #tabList {
-      overflow-y: auto;
-    }
-    .tabButton {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      width: 100%;
-      padding: 10px 15px;
-      cursor: pointer;
-      border: none;
-      border-bottom: 1px solid #ddd;
-      background: none;
-      text-align: left;
-      font-size: 14px;
-      box-sizing: border-box;
-    }
-    .tabButton.active {
-      background: #e9ecef;
-      font-weight: bold;
-    }
-    .tabButton .closeBtn {
-      font-weight: bold;
-      color: #888;
-      cursor: pointer;
-      user-select: none;
-      padding-left: 10px;
-    }
-    .tabButton .closeBtn:hover {
-      color: red;
-    }
-    h2 {
-      margin-top: 0;
-    }
-    label {
-      display: block;
-      margin: 10px 0 5px;
-    }
-    input[type="text"],
-    input[type="number"],
-    input[type="date"] {
-      padding: 5px;
-      width: 100%;
-      max-width: 320px;
-      box-sizing: border-box;
-    }
-    input[readonly] {
-      background: #e9ecef;
-      border: 1px solid #ccc;
-      cursor: default;
-    }
-    select.editDropdown {
-      width: 100%;
-      max-width: 100px;
-      padding: 2px 5px;
-    }
-    button.action {
-      margin-top: 10px;
-      padding: 6px 14px;
-      cursor: pointer;
-      margin-right: 10px;
-    }
-    table {
-      margin-top: 20px;
-      border-collapse: collapse;
-      width: 100%;
-      table-layout: fixed;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 8px 12px;
-      text-align: center;
-      word-wrap: break-word;
-      vertical-align: top;
-    }
-    th {
-      background-color: #f2f2f2;
-    }
-    td[contenteditable="true"] {
-      background-color: #fffbe6;
-      cursor: text;
-    }
-    tr.highlight {
-      background-color: #d4edda;
-    }
-    #predictionResult {
-      margin-top: 15px;
-      font-weight: bold;
-      font-size: 1.1em;
-      color: #155724;
-      background-color: #d4edda;
-      border: 1px solid #c3e6cb;
-      padding: 10px;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-    }
-    #analysisProcedure {
-      margin-top: 15px;
-      background-color: #e9ecef;
-      border: 1px solid #ced4da;
-      padding: 10px;
-      white-space: pre-wrap;
-      font-family: monospace;
-      max-height: 320px;
-      overflow-y: auto;
-      word-wrap: break-word;
-    }
-    #homePage {
-      flex-grow: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 40px;
-      text-align: center;
-      font-size: 1.2em;
-      color: #444;
-    }
-  </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Project Hub: Flight & Claw Tracker</title>
+    <style>
+        /* --- GLOBAL & NAV --- */
+        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; background-color: #f4f7f6; }
+        nav { background-color: #2c3e50; padding: 0.8rem; display: flex; justify-content: center; gap: 20px; z-index: 2000; flex-shrink: 0; }
+        nav button { background: none; border: none; color: white; font-size: 1rem; cursor: pointer; padding: 8px 20px; transition: 0.3s; border-radius: 4px; }
+        nav button.active-nav { background: #3498db; font-weight: bold; }
+
+        .main-section { display: none; flex-grow: 1; overflow: hidden; }
+        .main-section.active { display: flex; }
+
+        /* --- FLIGHTLOAD STYLES --- */
+        #container { display: flex; width: 100%; height: 100%; position: relative; }
+        #tabsContainer { width: 280px; border-right: 1px solid #ccc; display: flex; flex-direction: column; background: #fff; transition: width 0.3s ease; flex-shrink: 0; }
+        #rightPanel { flex-grow: 1; padding: 30px; overflow-y: auto; box-sizing: border-box; }
+        #hideSidebarBtn { position: absolute; top: 10px; left: 10px; z-index: 1001; background: #3498db; border: none; color: white; width: 35px; height: 35px; cursor: pointer; border-radius: 4px; }
+        #tabsHeader { padding: 55px 15px 10px; border-bottom: 2px solid #eee; }
+        .tabButton { display: flex; align-items: center; width: 100%; padding: 12px 15px; cursor: pointer; border: none; border-bottom: 1px solid #f0f0f0; background: none; text-align: left; box-sizing: border-box; gap: 10px; }
+        .tabButton.active { background: #e8f4fd; color: #2980b9; font-weight: bold; }
+        .journey-name { flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .closeBtn { color: #ccc; font-size: 18px; font-weight: bold; padding: 2px 8px; border-radius: 4px; transition: 0.2s; }
+        .closeBtn:hover { background-color: #fee2e2; color: #ef4444; }
+        
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; background: white; }
+        th, td { border: 1px solid #dfe6e9; padding: 12px; text-align: center; }
+        th { background: #f8f9fa; }
+        td[contenteditable="true"] { background-color: #fffdf0; outline: none; }
+        td[contenteditable="true"]:focus { background-color: #fff9db; border: 2px solid #3498db; }
+        .highlight { background-color: #dff9fb !important; font-weight: bold; border: 2px solid #3498db; }
+        
+        .result-box { background: #d4edda; padding: 15px; border-radius: 8px; margin-top: 20px; border-left: 5px solid #27ae60; display: none; }
+        .explanation-box { background: #f1f2f6; padding: 15px; border-radius: 8px; margin-top: 20px; font-family: monospace; white-space: pre-wrap; border: 1px solid #dfe6e9; display: none; }
+
+        /* --- CLAW MACHINE STYLES --- */
+        #claw-content { flex-direction: column; width: 100%; overflow-y: auto; padding: 30px; box-sizing: border-box; padding-bottom: 120px; }
+        .claw-header { display: flex; gap: 15px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 30px; align-items: center; }
+        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .product-card { background: white; border: 2px solid #e0e0e0; border-radius: 12px; padding: 20px; position: relative; min-height: 200px; display: flex; flex-direction: column; box-shadow: 0 4px 6px rgba(0,0,0,0.02); }
+        .product-card.locked { background-color: #f0f2f5; border: 2px dashed #bdc3c7; }
+        .timestamp { font-size: 0.75rem; color: #95a5a6; margin-bottom: 5px; font-style: italic; }
+        .counter-row { display: flex; align-items: center; gap: 15px; margin: 15px 0; }
+        .btn-round { width: 35px; height: 35px; border-radius: 50%; border: none; background: #3498db; color: white; font-size: 1.2rem; font-weight: bold; cursor: pointer; }
+        .btn-round:disabled { background: #bdc3c7; cursor: not-allowed; }
+        .lock-btn { margin-top: auto; padding: 6px 12px; border-radius: 4px; border: 1px solid #bdc3c7; background: #fff; cursor: pointer; font-size: 0.85rem; width: fit-content; }
+        .lock-btn.is-locked { background: #f1c40f; font-weight: bold; }
+        .product-total { position: absolute; bottom: 15px; right: 20px; font-weight: bold; color: #27ae60; font-size: 1.3rem; }
+        
+        /* Updated Delete Icon Logic */
+        .delete-prod { position: absolute; top: 10px; right: 10px; color: #ccc; cursor: pointer; font-size: 1.4rem; }
+        .product-card.locked .delete-prod { display: none; } /* Hide delete when locked */
+        
+        .global-footer { background: #2c3e50; color: white; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; position: fixed; bottom: 0; left: 0; right: 0; z-index: 2001; }
+    </style>
 </head>
 <body>
-  <button id="hideSidebarBtn" title="Toggle Navigation">☰</button>
-  <div id="container">
-    <div id="tabsContainer">
-      <div id="tabsHeader">
-        <button id="homeTab" class="tabButton active" onclick="selectHomeTab()">Home Page</button>
-        <button id="addJourneyBtn" onclick="addTabPrompt()">+ Add New Journey</button>
-      </div>
-      <div id="tabListWrapper">
-        <div id="tabList"></div>
-      </div>
+
+    <nav>
+        <button onclick="switchTab('home-sect')" id="nav-home" class="active-nav">Home</button>
+        <button onclick="switchTab('flightload-sect')" id="nav-flight">Flightload</button>
+        <button onclick="switchTab('claw-sect')" id="nav-claw">Claw Machine</button>
+    </nav>
+
+    <div id="home-sect" class="main-section active">
+        <div style="padding: 50px; text-align: center; width: 100%;">
+            <h1>Project Hub</h1>
+            <p>Welcome. Select a subsite above to begin.</p>
+        </div>
     </div>
-    <div id="rightPanel">
-      <div id="homePage">
-        <h2>Welcome to Flight Journeys Prediction Tool</h2>
-        <p>This tool lets you manage multiple flight journeys, add flights, and predict the earliest flight you can board.</p>
-        <p><strong>How to use:</strong></p>
-        <ol style="max-width: 600px; margin: auto; text-align: left;">
-          <li>Click <em>+ Add New Journey</em> to create a departure, arrival, and date for the journey.</li>
-          <li>Select a journey tab to input flights for that route and date.</li>
-          <li>Enter flight details and add flights to the journey.</li>
-          <li>Click <em>Execute Prediction</em> to analyze flights and find your earliest flight.</li>
-          <li>Manage journeys by selecting or deleting tabs on the left.</li>
-        </ol>
-      </div>
-      <div id="flightInputSection" style="display:none;">
-        <h2>Flight Details Input</h2>
-        <form id="flightForm" onsubmit="return false;">
-          <label for="flightNumber">Flight Number:</label>
-          <input type="text" id="flightNumber" placeholder="e.g. AB1234" required />
 
-          <label for="departure">Departure :</label>
-          <input type="text" id="departure" readonly />
+    <div id="flightload-sect" class="main-section">
+        <button id="hideSidebarBtn" onclick="toggleSidebar()">☰</button>
+        <div id="container">
+            <div id="tabsContainer">
+                <div id="tabsHeader">
+                    <button class="tabButton" onclick="selectHomeTab()">🏠 Overview</button>
+                    <button onclick="addTabPrompt()" style="width:100%; margin-top:10px; padding:8px; cursor:pointer; background:#2ecc71; border:none; color:white; border-radius:4px;">+ New Journey</button>
+                </div>
+                <div id="tabList" style="overflow-y: auto;"></div>
+            </div>
 
-          <label for="arrival">Arrival :</label>
-          <input type="text" id="arrival" readonly />
+            <div id="rightPanel">
+                <div id="flightHome">
+                    <h2>Flight Journeys Prediction Tool</h2>
+                    <p>Select or create a journey from the left sidebar.</p>
+                </div>
 
-          <label for="dateInput">Journey Date:</label>
-          <input type="date" id="dateInput" readonly />
+                <div id="flightContent" style="display:none;">
+                    <h2 id="journeyTitle">Journey Details</h2>
+                    <div style="background:#fff; padding:20px; border-radius:8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 20px;">
+                        <label>Flight #: <input type="text" id="fNum" style="width:80px"></label>
+                        <label>Seats: <input type="number" id="fTotal" style="width:60px"></label>
+                        <label>Booked: <input type="number" id="fBooked" style="width:60px"></label>
+                        <label>Queue: <input type="number" id="fQueue" style="width:60px"></label>
+                        <label><input type="checkbox" id="fTarget"> Targeted?</label>
+                        <button onclick="addFlight()" style="padding:6px 15px; cursor:pointer; background:#2c3e50; color:white; border:none; border-radius:4px;">Add Flight</button>
+                    </div>
 
-          <label for="totalSeatsAvailable">Total Seats Available:</label>
-          <input type="number" id="totalSeatsAvailable" min="0" placeholder="e.g. 150" required />
+                    <table id="fTable" style="display:none;">
+                        <thead>
+                            <tr><th>Flight #</th><th>Total Seats</th><th>Booked</th><th>Rem.</th><th>Queue</th><th>Target?</th><th>Rollover</th></tr>
+                        </thead>
+                        <tbody id="fBody" oninput="syncTableData()"></tbody>
+                    </table>
 
-          <label for="totalSeatsBooked">Total Seats Booked:</label>
-          <input type="number" id="totalSeatsBooked" min="0" placeholder="e.g. 120" required />
-
-          <label for="queueInput">Number of People Queueing Before You:</label>
-          <input type="number" id="queueInput" min="0" placeholder="e.g. 3" required />
-
-          <label>
-            <input type="checkbox" id="targetFlight" />
-            Is this your targeted flight?
-          </label>
-
-          <button class="action" onclick="addFlightToCurrentJourney()">Add Flight</button>
-          <button class="action" onclick="clearCurrentInputs()">Clear Inputs</button>
-          <button class="action" onclick="executePrediction()">Execute Prediction</button>
-        </form>
-
-        <table id="flightsTable" style="display:none;">
-          <thead>
-            <tr>
-              <th>Flight Number</th>
-              <th>Total Seats Available</th>
-              <th>Total Seats Booked</th>
-              <th>Seats Remaining</th>
-              <th>People Queueing Before</th>
-              <th>Targeted Flight</th>
-              <th>Staff Rolled to Next Flight</th>
-            </tr>
-          </thead>
-          <tbody id="flightsBody"></tbody>
-        </table>
-
-        <div id="predictionResult"></div>
-        <pre id="analysisProcedure"></pre>
-      </div>
+                    <div id="resBox" class="result-box"></div>
+                    <div id="expBox" class="explanation-box"></div>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
 
-<script>
-  const journeys = {};
-  let currentJourneyKey = null;
-  const tabsContainer = document.getElementById('tabsContainer');
-  const rightPanel = document.getElementById('rightPanel');
-  const hideSidebarBtn = document.getElementById('hideSidebarBtn');
+    <div id="claw-sect" class="main-section">
+        <div id="claw-content">
+            <h2>Claw Machine Attempt Tracker</h2>
+            <div class="claw-header">
+                <input type="text" id="pName" placeholder="Product Name" style="padding:8px; border:1px solid #ccc; border-radius:4px;">
+                <input type="number" id="pCost" placeholder="Cost/Attempt ($)" step="0.5" style="padding:8px; border:1px solid #ccc; border-radius:4px;">
+                <button onclick="addProduct()" style="padding:10px 20px; background:#27ae60; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">+ Create Card</button>
+            </div>
+            <div id="productGrid" class="product-grid"></div>
+        </div>
+        <div class="global-footer">
+            <span>Items Tracked: <strong id="totalProds">0</strong></span>
+            <span style="font-size: 1.4rem;">Grand Total Spent: <strong id="grandTotal">$0.00</strong></span>
+        </div>
+    </div>
 
-  // ---- LOCAL STORAGE HANDLERS ----
-  function saveData() {
-    localStorage.setItem('flightJourneysData', JSON.stringify(journeys));
-  }
-  function loadData() {
-    const data = localStorage.getItem('flightJourneysData');
-    if (data) {
-      Object.assign(journeys, JSON.parse(data));
-    }
-  }
-  // ---------------------------------
+    <script>
+        let journeys = JSON.parse(localStorage.getItem('flightData') || '{}');
+        let clawProducts = JSON.parse(localStorage.getItem('clawData') || '[]');
+        let currentKey = null;
 
-  hideSidebarBtn.addEventListener('click', () => {
-    if (tabsContainer.style.width === '0px' || tabsContainer.style.width === '0') {
-      tabsContainer.style.width = '250px';
-      rightPanel.classList.remove('fullWidth');
-    } else {
-      tabsContainer.style.width = '0';
-      rightPanel.classList.add('fullWidth');
-    }
-  });
-
-  function formatDate(d) {
-    const day = ('0' + d.getDate()).slice(-2);
-    const month = ('0' + (d.getMonth() + 1)).slice(-2);
-    const year = d.getFullYear();
-    return `${day}/${month}/${year}`;
-  }
-
-  function sanitizeKey(dep, arr, date) {
-    return dep.trim().toLowerCase() + '→' + arr.trim().toLowerCase() + '→' + date;
-  }
-
-  async function promptDate() {
-    return new Promise(resolve => {
-      const modal = document.createElement('div');
-      modal.style.position = 'fixed';
-      modal.style.top = 0; modal.style.left = 0; modal.style.right = 0; modal.style.bottom = 0;
-      modal.style.background = 'rgba(0,0,0,0.4)';
-      modal.style.display = 'flex';
-      modal.style.justifyContent = 'center';
-      modal.style.alignItems = 'center';
-      modal.style.zIndex = 10000;
-
-      const container = document.createElement('div');
-      container.style.background = '#fff';
-      container.style.padding = '20px';
-      container.style.borderRadius = '8px';
-      container.style.textAlign = 'center';
-      container.style.minWidth = '250px';
-
-      const label = document.createElement('label');
-      label.textContent = 'Select Journey Date:';
-      label.style.display = 'block';
-      label.style.marginBottom = '8px';
-
-      const input = document.createElement('input');
-      input.type = 'date';
-      input.style.width = '100%';
-      input.style.fontSize = '16px';
-      input.valueAsDate = new Date();
-
-      const btnConfirm = document.createElement('button');
-      btnConfirm.textContent = 'OK';
-      btnConfirm.style.marginTop = '15px';
-      btnConfirm.style.padding = '6px 12px';
-      btnConfirm.onclick = () => {
-        if (!input.value) {
-          alert('Please select a date.');
-          return;
+        function switchTab(id) {
+            document.querySelectorAll('.main-section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-nav'));
+            document.getElementById(id).classList.add('active');
+            document.getElementById('nav-' + id.split('-')[0]).classList.add('active-nav');
         }
-        document.body.removeChild(modal);
-        resolve(new Date(input.value));
-      };
 
-      const btnCancel = document.createElement('button');
-      btnCancel.textContent = 'Cancel';
-      btnCancel.style.marginLeft = '10px';
-      btnCancel.style.padding = '6px 12px';
-      btnCancel.onclick = () => {
-        document.body.removeChild(modal);
-        resolve(null);
-      };
-
-      container.appendChild(label);
-      container.appendChild(input);
-      container.appendChild(btnConfirm);
-      container.appendChild(btnCancel);
-      modal.appendChild(container);
-      document.body.appendChild(modal);
-    });
-  }
-
-  async function addTabPrompt() {
-    const dep = prompt("Enter Departure for the new journey:");
-    if (!dep) return;
-    const arr = prompt("Enter Arrival for the new journey:");
-    if (!arr) return;
-
-    const date = await promptDate();
-    if (!date) return;
-    const dateStr = formatDate(date);
-
-    const key = sanitizeKey(dep, arr, dateStr);
-    if (journeys[key]) {
-      alert("Journey already exists.");
-      return;
-    }
-    journeys[key] = {
-      departure: dep.trim(),
-      arrival: arr.trim(),
-      date: dateStr,
-      flights: []
-    };
-    saveData();
-    addTabButton(key);
-    selectJourney(key);
-  }
-
-  function addTabButton(key) {
-    const tabList = document.getElementById('tabList');
-    const btn = document.createElement('button');
-    btn.className = 'tabButton';
-    btn.dataset.key = key;
-
-    const journey = journeys[key];
-    const spanText = document.createElement('span');
-    spanText.textContent = `${journey.departure} → ${journey.arrival} (${journey.date})`;
-    spanText.style.flexGrow = '1';
-    btn.appendChild(spanText);
-
-    const closeBtn = document.createElement('span');
-    closeBtn.className = 'closeBtn';
-    closeBtn.textContent = '×';
-    closeBtn.title = "Delete this journey";
-    closeBtn.onclick = (e) => {
-      e.stopPropagation();
-      deleteJourney(key);
-    };
-    btn.appendChild(closeBtn);
-
-    btn.onclick = () => selectJourney(key);
-    tabList.appendChild(btn);
-  }
-
-  function deleteJourney(key) {
-    if (!journeys[key]) return;
-    if (confirm(`Are you sure you want to delete journey "${journeys[key].departure} → ${journeys[key].arrival} (${journeys[key].date})"?`)) {
-      delete journeys[key];
-      saveData();
-      const tabList = document.getElementById('tabList');
-      const btn = tabList.querySelector(`.tabButton[data-key="${key}"]`);
-      if (btn) tabList.removeChild(btn);
-
-      if (currentJourneyKey === key) {
-        const keys = Object.keys(journeys);
-        if (keys.length > 0) {
-          selectJourney(keys[0]);
-        } else {
-          selectHomeTab();
+        /* --- FLIGHTLOAD LOGIC --- */
+        function toggleSidebar() { 
+            const s = document.getElementById('tabsContainer'); 
+            s.style.width = (s.style.width === '0px') ? '280px' : '0px'; 
         }
-      }
-    }
-  }
 
-  function selectHomeTab() {
-    currentJourneyKey = null;
-    document.getElementById('homeTab').classList.add('active');
-    document.querySelectorAll('#tabList .tabButton').forEach(btn => btn.classList.remove('active'));
-    document.getElementById('homePage').style.display = 'block';
-    document.getElementById('flightInputSection').style.display = 'none';
-    clearRightPanel();
-  }
+        function addTabPrompt() { 
+            const dep = prompt("Departure:"); const arr = prompt("Arrival:"); 
+            if(!dep || !arr) return; const key = dep + " to " + arr; 
+            if(!journeys[key]) journeys[key] = { flights: [] }; 
+            save(); renderTabs(); selectJourney(key); 
+        }
 
-  function parseDateToISO(str) {
-    const parts = str.split('/');
-    if (parts.length !== 3) return '';
-    return `${parts[2]}-${parts[1]}-${parts[0]}`;
-  }
+        function renderTabs() { 
+            const list = document.getElementById('tabList'); list.innerHTML = ''; 
+            Object.keys(journeys).forEach(key => { 
+                const div = document.createElement('div'); 
+                div.className = 'tabButton' + (key === currentKey ? ' active' : ''); 
+                div.innerHTML = `<span class="journey-name" onclick="selectJourney('${key}')">${key}</span><span class="closeBtn" onclick="deleteJourney('${key}')">×</span>`; 
+                list.appendChild(div); 
+            }); 
+        }
 
-  function selectJourney(key) {
-    currentJourneyKey = key;
-    document.getElementById('homeTab').classList.remove('active');
-    document.querySelectorAll('#tabList .tabButton').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.key === key);
-    });
-    const journey = journeys[key];
-    document.getElementById('departure').value = journey.departure;
-    document.getElementById('arrival').value = journey.arrival;
-    document.getElementById('dateInput').value = parseDateToISO(journey.date);
+        function deleteJourney(key) { 
+            if(confirm(`Delete "${key}"?`)) { 
+                delete journeys[key]; if(currentKey === key) { currentKey = null; selectHomeTab(); } 
+                save(); renderTabs(); 
+            } 
+        }
 
-    document.getElementById('homePage').style.display = 'none';
-    document.getElementById('flightInputSection').style.display = 'block';
+        function selectJourney(key) { 
+            currentKey = key; renderTabs(); 
+            document.getElementById('flightHome').style.display = 'none'; 
+            document.getElementById('flightContent').style.display = 'block'; 
+            document.getElementById('journeyTitle').innerText = key; 
+            runPrediction(); 
+        }
 
-    populateFlightsTable();
-    clearPrediction();
-    clearCurrentInputs();
-  }
+        function addFlight() { 
+            if(!currentKey) return; 
+            const f = { 
+                num: document.getElementById('fNum').value || "FL"+Math.floor(Math.random()*900), 
+                total: parseInt(document.getElementById('fTotal').value)||0, 
+                booked: parseInt(document.getElementById('fBooked').value)||0, 
+                queue: parseInt(document.getElementById('fQueue').value)||0, 
+                target: document.getElementById('fTarget').checked, 
+                rolled: 0 
+            }; 
+            journeys[currentKey].flights.push(f); save(); runPrediction(); 
+            document.getElementById('fNum').value=''; document.getElementById('fTotal').value=''; 
+            document.getElementById('fBooked').value=''; document.getElementById('fQueue').value=''; 
+            document.getElementById('fTarget').checked=false;
+        }
 
-  function populateFlightsTable() {
-    const flightsBody = document.getElementById('flightsBody');
-    const flightsTable = document.getElementById('flightsTable');
-    flightsBody.innerHTML = '';
-    if (!currentJourneyKey || !journeys[currentJourneyKey] || journeys[currentJourneyKey].flights.length === 0) {
-      flightsTable.style.display = 'none';
-      return;
-    }
-    flightsTable.style.display = 'table';
+        function syncTableData() { 
+            const rows = document.getElementById('fBody').rows; 
+            const flights = []; 
+            for (let i = 0; i < rows.length; i++) { 
+                const cells = rows[i].cells; 
+                flights.push({ 
+                    num: cells[0].innerText, 
+                    total: parseInt(cells[1].innerText)||0, 
+                    booked: parseInt(cells[2].innerText)||0, 
+                    queue: parseInt(cells[4].innerText)||0, 
+                    target: cells[5].innerText.toUpperCase()==="YES", 
+                    rolled: 0 
+                }); 
+            } 
+            journeys[currentKey].flights = flights; save(); runPrediction(); 
+        }
 
-    journeys[currentJourneyKey].flights.forEach((flight, i) => {
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td contenteditable="true">${flight.flightNumber}</td>
-        <td contenteditable="true">${flight.totalSeatsAvailable}</td>
-        <td contenteditable="true">${flight.totalSeatsBooked}</td>
-        <td>${flight.seatsRemaining ?? (flight.totalSeatsAvailable - flight.totalSeatsBooked)}</td>
-        <td contenteditable="true">${flight.peopleQueueingBefore}</td>
-        <td>
-          <select class="editDropdown">
-            <option value="Yes" ${flight.isTargeted ? "selected" : ""}>Yes</option>
-            <option value="No" ${!flight.isTargeted ? "selected" : ""}>No</option>
-          </select>
-        </td>
-        <td>${flight.staffRolled || 0}</td>
-      `;
-      flightsBody.appendChild(row);
-    });
-  }
+        function runPrediction() { 
+            if(!currentKey) return; 
+            const flights = journeys[currentKey].flights; 
+            const body = document.getElementById('fBody'); 
+            body.innerHTML = ''; 
+            if(flights.length > 0) document.getElementById('fTable').style.display = 'table'; 
+            else { document.getElementById('fTable').style.display = 'none'; return; }
+            
+            let rollover = 0; let successIdx = -1; let log = "PREDICTION STEPS:\n"; 
+            flights.forEach((f, i) => { 
+                let rem = f.total - f.booked; let totalQ = f.queue + rollover; 
+                if(rem > totalQ) { rollover = 0; if(successIdx === -1 && f.target) successIdx = i; } 
+                else { rollover = totalQ - rem; } 
+                f.rolled = rollover; 
+                const row = body.insertRow(); 
+                if (i === successIdx) row.className = 'highlight'; 
+                row.innerHTML = `<td contenteditable="true">${f.num}</td><td contenteditable="true">${f.total}</td><td contenteditable="true">${f.booked}</td><td>${rem}</td><td contenteditable="true">${f.queue}</td><td contenteditable="true">${f.target?'YES':'NO'}</td><td>${f.rolled}</td>`; 
+                log += `Flight ${f.num}: Rollover from here is ${rollover}\n`;
+            }); 
+            document.getElementById('resBox').style.display='block'; 
+            document.getElementById('expBox').style.display='block'; 
+            document.getElementById('resBox').innerHTML = successIdx !== -1 ? `<strong>Prediction:</strong> Boarding Success on ${flights[successIdx].num}` : "<strong>Prediction:</strong> No boarding window found."; 
+            document.getElementById('expBox').innerText = log; 
+        }
 
-  function clearCurrentInputs() {
-    document.getElementById('flightNumber').value = '';
-    document.getElementById('totalSeatsAvailable').value = '';
-    document.getElementById('totalSeatsBooked').value = '';
-    document.getElementById('queueInput').value = '';
-    document.getElementById('targetFlight').checked = false;
-  }
+        function selectHomeTab() { currentKey = null; renderTabs(); document.getElementById('flightHome').style.display = 'block'; document.getElementById('flightContent').style.display = 'none'; }
+        function save() { localStorage.setItem('flightData', JSON.stringify(journeys)); }
 
-  function addFlightToCurrentJourney() {
-    if (!currentJourneyKey) {
-      alert("Please add and select a journey tab first (departure and arrival).");
-      return;
-    }
-    const flightNumber = document.getElementById('flightNumber').value.trim();
-    const totalSeatsAvailable = parseInt(document.getElementById('totalSeatsAvailable').value.trim());
-    const totalSeatsBooked = parseInt(document.getElementById('totalSeatsBooked').value.trim());
-    const queueNumber = parseInt(document.getElementById('queueInput').value.trim());
-    const targeted = document.getElementById('targetFlight').checked;
+        /* --- CLAW MACHINE LOGIC --- */
+        function addProduct() {
+            const name = document.getElementById('pName').value.trim();
+            const cost = parseFloat(document.getElementById('pCost').value);
+            if(!name || isNaN(cost)) return alert("Please enter name and cost.");
+            const now = new Date();
+            const timeStr = now.toLocaleDateString() + " " + now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            const product = { id: Date.now(), name: name, cost: cost, attempts: 0, date: timeStr, locked: false };
+            clawProducts.push(product);
+            saveClaw(); renderClaw();
+            document.getElementById('pName').value = ''; document.getElementById('pCost').value = '';
+        }
 
-    if (!flightNumber) {
-      alert('Please enter the flight number.');
-      return;
-    }
-    if (isNaN(totalSeatsAvailable) || totalSeatsAvailable < 0) {
-      alert('Please enter a valid non-negative number for Total Seats Available.');
-      return;
-    }
-    if (isNaN(totalSeatsBooked) || totalSeatsBooked < 0) {
-      alert('Please enter a valid non-negative number for Total Seats Booked.');
-      return;
-    }
-    if (isNaN(queueNumber) || queueNumber < 0) {
-      alert('Please enter a valid non-negative number for the number of people queueing before you.');
-      return;
-    }
+        function toggleLock(id) {
+            const p = clawProducts.find(x => x.id === id);
+            if(p) { p.locked = !p.locked; saveClaw(); renderClaw(); }
+        }
 
-    journeys[currentJourneyKey].flights.push({
-      flightNumber,
-      totalSeatsAvailable,
-      totalSeatsBooked,
-      seatsRemaining: totalSeatsAvailable - totalSeatsBooked,
-      peopleQueueingBefore: queueNumber,
-      isTargeted: targeted,
-      staffRolled: 0
-    });
-    saveData();
-    populateFlightsTable();
-    clearCurrentInputs();
-    clearPrediction();
-  }
+        function updateAttempts(id, delta) {
+            const p = clawProducts.find(x => x.id === id);
+            if(p && !p.locked) { p.attempts = Math.max(0, p.attempts + delta); saveClaw(); renderClaw(); }
+        }
 
-  function clearPrediction() {
-    const rows = document.querySelectorAll('#flightsBody tr');
-    rows.forEach(row => {
-      row.classList.remove('highlight');
-    });
-    const pred = document.getElementById('predictionResult');
-    pred.style.display = 'none';
-    pred.textContent = '';
-    const analysis = document.getElementById('analysisProcedure');
-    analysis.style.display = 'none';
-    analysis.textContent = '';
-  }
+        function deleteProduct(id) {
+            const p = clawProducts.find(x => x.id === id);
+            if(!p) return;
+            if(p.locked) return; // EXTRA SAFETY: Prevent deletion if locked via logic
+            if(confirm("Delete this card and its history?")) { clawProducts = clawProducts.filter(x => x.id !== id); saveClaw(); renderClaw(); }
+        }
 
-  function executePrediction() {
-    if (!currentJourneyKey || !journeys[currentJourneyKey]) {
-      alert("Please select a journey before executing prediction.");
-      return;
-    }
-    clearPrediction();
+        function renderClaw() {
+            const grid = document.getElementById('productGrid'); grid.innerHTML = '';
+            let grandTotal = 0;
+            clawProducts.forEach(p => {
+                const total = p.attempts * p.cost; grandTotal += total;
+                const card = document.createElement('div');
+                card.className = 'product-card' + (p.locked ? ' locked' : '');
+                card.innerHTML = `
+                    <span class="delete-prod" onclick="deleteProduct(${p.id})">×</span>
+                    <div class="timestamp">Started: ${p.date}</div>
+                    <h3>${p.name}</h3>
+                    <div style="color:#7f8c8d; font-size:0.9rem;">$${p.cost.toFixed(2)} / attempt</div>
+                    <div class="counter-row">
+                        <button class="btn-round" ${p.locked ? 'disabled' : ''} onclick="updateAttempts(${p.id}, -1)">-</button>
+                        <span style="font-size:1.6rem; font-weight:bold; min-width:40px; text-align:center;">${p.attempts}</span>
+                        <button class="btn-round" ${p.locked ? 'disabled' : ''} onclick="updateAttempts(${p.id}, 1)">+</button>
+                    </div>
+                    <button class="lock-btn ${p.locked ? 'is-locked' : ''}" onclick="toggleLock(${p.id})">${p.locked ? '🔓 Unlock to Edit' : '🔒 Lock Card'}</button>
+                    <div class="product-total">$${total.toFixed(2)}</div>
+                `;
+                grid.appendChild(card);
+            });
+            document.getElementById('totalProds').innerText = clawProducts.length;
+            document.getElementById('grandTotal').innerText = '$' + grandTotal.toFixed(2);
+        }
 
-    const flights = journeys[currentJourneyKey].flights;
-    const rows = document.querySelectorAll('#flightsBody tr');
+        function saveClaw() { localStorage.setItem('clawData', JSON.stringify(clawProducts)); }
 
-    // Sync and persist flight data after any table edit or select change
-    rows.forEach((row, i) => {
-      const cells = row.cells;
-      flights[i].flightNumber = cells[0].textContent.trim();
-      flights[i].totalSeatsAvailable = parseInt(cells[1].textContent) || 0;
-      flights[i].totalSeatsBooked = parseInt(cells[2].textContent) || 0;
-      flights[i].seatsRemaining = flights[i].totalSeatsAvailable - flights[i].totalSeatsBooked;
-      flights[i].peopleQueueingBefore = parseInt(cells[4].textContent) || 0;
-      const select = cells[5].querySelector('select.editDropdown');
-      flights[i].isTargeted = select && select.value.toLowerCase() === 'yes';
-      flights[i].staffRolled = 0;
-      cells[3].textContent = flights[i].seatsRemaining;
-      cells[6].textContent = 0;
-      row.classList.remove('highlight');
-    });
-    saveData();
-
-    // Find position of first targeted flight
-    const firstTargetedIndex = flights.findIndex(f => f.isTargeted);
-    if(firstTargetedIndex === -1) {
-      alert("Please select one targeted flight before executing prediction.");
-      return;
-    }
-
-    let peopleToTransfer = 0;
-    let earliestFlightIndex = -1;
-    let analysisLog = `Prediction Analysis Procedure for journey ${journeys[currentJourneyKey].departure} → ${journeys[currentJourneyKey].arrival} (${journeys[currentJourneyKey].date}):\n\n`;
-
-    // Process all flights, staff rolling forward, but earliest you can board is targeted or after
-    for(let i = 0; i < flights.length; i++) {
-      const flight = flights[i];
-      let queueingBefore = flight.peopleQueueingBefore + peopleToTransfer;
-      analysisLog += `Flight ${i+1} (${flight.flightNumber}):\n`;
-      analysisLog += `  Seats Remaining: ${flight.seatsRemaining}\n`;
-      analysisLog += `  People Queueing Before (including transferred): ${queueingBefore}\n`;
-
-      if(flight.seatsRemaining > queueingBefore) {
-        peopleToTransfer = 0;
-        analysisLog += `  Decision: Seats remaining > people queueing, no transfer needed.\n`;
-      } else {
-        peopleToTransfer = queueingBefore - flight.seatsRemaining;
-        analysisLog += `  Decision: Seats remaining ≤ people queueing, transferring ${peopleToTransfer} people to next flight.\n`;
-      }
-
-      flight.staffRolled = peopleToTransfer;
-      rows[i].cells[6].textContent = peopleToTransfer;
-
-      if(peopleToTransfer === 0 && earliestFlightIndex === -1 && i >= firstTargetedIndex) {
-        earliestFlightIndex = i;
-        analysisLog += `  Conclusion: Earliest flight you can get on found: Flight ${i+1} (${flight.flightNumber}).\n`;
-        break;
-      }
-      analysisLog += '\n';
-    }
-
-    const predictionResult = document.getElementById('predictionResult');
-    const analysisDisplay = document.getElementById('analysisProcedure');
-    if(earliestFlightIndex === -1) {
-      predictionResult.textContent = 'No flight can accommodate you based on the provided data.';
-    } else {
-      rows[earliestFlightIndex].classList.add('highlight');
-      predictionResult.textContent = `Earliest flight you can get on is: ${flights[earliestFlightIndex].flightNumber}`;
-    }
-
-    predictionResult.style.display = 'block';
-    analysisDisplay.textContent = analysisLog;
-    analysisDisplay.style.display = 'block';
-  }
-
-  document.addEventListener('change', e => {
-    if (e.target.classList.contains('editDropdown')) {
-      executePrediction(); // Save and update right away for dropdown changes
-    }
-  });
-
-  function restoreTabs() {
-    const keys = Object.keys(journeys);
-    keys.forEach(addTabButton);
-    if(keys.length > 0) selectJourney(keys[0]);
-    else selectHomeTab();
-  }
-
-  function clearRightPanel() {
-    document.getElementById('departure').value = '';
-    document.getElementById('arrival').value = '';
-    document.getElementById('dateInput').value = '';
-    document.getElementById('flightsBody').innerHTML = '';
-    document.getElementById('flightsTable').style.display = 'none';
-    clearPrediction();
-    clearCurrentInputs();
-  }
-
-  window.onload = () => {
-    loadData();
-    restoreTabs();
-  };
-</script>
+        window.onload = () => { renderTabs(); renderClaw(); };
+    </script>
 </body>
 </html>
