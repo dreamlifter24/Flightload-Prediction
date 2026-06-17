@@ -64,21 +64,29 @@
         
         /* --- FLIGHT TABLE --- */
         .table-wrapper { width: 100%; overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); background: white; }
-        table { width: 100%; border-collapse: collapse; min-width: 800px; }
+        table { width: 100%; border-collapse: collapse; min-width: 900px; }
         th { background: #f8fafc; padding: 12px 8px; font-size: 0.85rem; color: #64748b; text-transform: uppercase; border-bottom: 2px solid var(--border); }
         td { padding: 6px; text-align: center; border-bottom: 1px solid var(--border); vertical-align: middle; }
         
         /* Inline Table Inputs */
-        .tbl-input { width: 100%; padding: 8px 4px; border: 1px solid transparent; background: transparent; text-align: center; font-size: 0.95rem; font-weight: 500; border-radius: 4px; outline: none; }
-        .tbl-input:focus { border: 1px solid var(--primary); background: white; }
-        .t-target { width: 20px; height: 20px; cursor: pointer; accent-color: var(--primary); }
-        .btn-del { background: #fee2e2; color: #ef4444; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .tbl-input { width: 100%; padding: 8px 4px; border: 1px solid transparent; background: transparent; text-align: center; font-size: 0.95rem; font-weight: 500; border-radius: 4px; outline: none; transition: 0.2s; }
+        .tbl-input:not(:disabled) { border: 1px dashed var(--primary); background: #fefce8; } /* Highlight editable fields */
+        .tbl-input:focus:not(:disabled) { border: 1px solid var(--primary); background: white; }
+        .tbl-input:disabled { color: var(--dark); opacity: 1; -webkit-text-fill-color: var(--dark); background: transparent; border: 1px solid transparent; }
+        
+        .t-target { width: 22px; height: 22px; cursor: pointer; accent-color: var(--primary); }
+        
+        /* Action Buttons in Table */
+        .btn-icon { background: #f1f5f9; border: 1px solid var(--border); color: #475569; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9rem; transition: 0.2s; }
+        .btn-icon:hover { background: #e2e8f0; }
+        .btn-icon:disabled { opacity: 0.3; cursor: not-allowed; }
+        .btn-del { background: #fee2e2; color: #ef4444; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-left: 5px; }
         
         /* Display Cells */
         .disp-cell { font-weight: bold; font-size: 1.1rem; }
         .rem-pos { color: var(--success); }
         .rem-neg { color: var(--danger); }
-        .target-row { background-color: #eff6ff; }
+        .target-row { background-color: #eff6ff; border-left: 4px solid var(--primary); }
 
         /* --- ALERTS --- */
         .alert { padding: 15px; border-radius: 8px; margin-top: 15px; border-left: 5px solid; }
@@ -87,6 +95,7 @@
         .alert-warning { background: #fffbeb; border-color: var(--warning); color: #78350f; }
         .alert-danger { background: #fef2f2; border-color: var(--danger); color: #7f1d1d; }
         .buffer-text { margin-top: 8px; font-size: 0.9rem; font-weight: bold; opacity: 0.9; }
+        .fallback-box { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(0,0,0,0.1); font-size: 0.95rem; }
 
         /* --- CLAW MACHINE --- */
         #claw-content { padding: 15px; overflow-y: auto; padding-bottom: 150px; }
@@ -153,7 +162,7 @@
                             <input type="number" id="fQP11" placeholder="P11 Queue Size">
                             <input type="number" id="fQP25" placeholder="P25 Queue Size">
                         </div>
-                        <button class="btn-main" onclick="addFlight()">Add Flight to Journey</button>
+                        <button class="btn-main" onclick="addFlight()">Add Flight (Locked by Default)</button>
                     </div>
                     
                     <div class="card" id="tableCard" style="display:none; padding: 0; overflow: hidden;">
@@ -161,15 +170,16 @@
                             <table id="fTable">
                                 <thead>
                                     <tr>
-                                        <th style="width: 15%">Flight</th>
-                                        <th style="width: 10%">Total</th>
-                                        <th style="width: 10%">Bkd</th>
-                                        <th style="width: 10%">Rem</th>
-                                        <th style="width: 10%" title="People ahead if using P11">Q(P11)</th>
-                                        <th style="width: 10%" title="People ahead if using P25">Q(P25)</th>
+                                        <th style="width: 8%">Order</th>
+                                        <th style="width: 12%">Flight</th>
+                                        <th style="width: 8%">Total</th>
+                                        <th style="width: 8%">Bkd</th>
+                                        <th style="width: 8%">Rem</th>
+                                        <th style="width: 8%" title="People ahead if using P11">Q(P11)</th>
+                                        <th style="width: 8%" title="People ahead if using P25">Q(P25)</th>
                                         <th style="width: 8%">Target</th>
-                                        <th style="width: 12%" title="People rolling over from missed previous flights">Rollover</th>
-                                        <th style="width: 5%"></th>
+                                        <th style="width: 10%" title="People rolling over from missed previous flights">Rollover</th>
+                                        <th style="width: 22%">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="fBody"></tbody>
@@ -247,35 +257,53 @@
             document.getElementById('flightHome').style.display = 'none';
             document.getElementById('flightContent').style.display = 'block';
             document.getElementById('journeyTitle').innerText = key;
-            renderFlightTable(); // Rebuild DOM for new journey
+            renderFlightTable(); 
         }
 
         function addFlight() {
             if(!currentKey) return;
-            // Data Migration / Fallback handling for new properties
             journeys[currentKey].flights.push({
                 num: document.getElementById('fNum').value || "FL"+Math.floor(Math.random()*900),
                 total: parseInt(document.getElementById('fTotal').value)||0,
                 booked: parseInt(document.getElementById('fBooked').value)||0,
                 qP11: parseInt(document.getElementById('fQP11').value)||0,
                 qP25: parseInt(document.getElementById('fQP25').value)||0,
-                target: false // Default to false
+                target: false,
+                locked: true // Enforced default lock status
             });
             saveFlights(); 
             
             // Clear inputs
             ['fNum','fTotal','fBooked','fQP11','fQP25'].forEach(id => document.getElementById(id).value = '');
             
-            renderFlightTable(); // Rebuild table to include new row
+            renderFlightTable(); 
         }
 
-        // Updates data directly from table inputs without destroying the row DOM
+        // --- ROW REORDERING LOGIC ---
+        function moveFlight(index, direction) {
+            let flights = journeys[currentKey].flights;
+            if (index + direction < 0 || index + direction >= flights.length) return;
+            
+            let temp = flights[index];
+            flights[index] = flights[index + direction];
+            flights[index + direction] = temp;
+            
+            saveFlights();
+            renderFlightTable();
+        }
+
+        // --- ROW LOCKING LOGIC ---
+        function toggleFlightLock(index) {
+            journeys[currentKey].flights[index].locked = !journeys[currentKey].flights[index].locked;
+            saveFlights();
+            renderFlightTable(); // Re-render to apply disabled state visually
+        }
+
         function updateFlightData(index, field, value) {
             if(field === 'target') {
-                // Optional: Uncheck other targets if you only want 1 target at a time
                 journeys[currentKey].flights.forEach(f => f.target = false);
                 journeys[currentKey].flights[index].target = value;
-                renderFlightTable(); // Rebuild because checkboxes need to reset
+                renderFlightTable(); 
                 return;
             } else if(field === 'num') {
                 journeys[currentKey].flights[index][field] = value;
@@ -283,16 +311,18 @@
                 journeys[currentKey].flights[index][field] = parseInt(value) || 0;
             }
             saveFlights();
-            updatePredictions(); // Only update text/logic, keeps cursor focused!
+            updatePredictions(); 
         }
 
         function deleteFlightItem(index) {
-            journeys[currentKey].flights.splice(index, 1);
-            saveFlights();
-            renderFlightTable();
+            if(confirm("Remove this flight?")) {
+                journeys[currentKey].flights.splice(index, 1);
+                saveFlights();
+                renderFlightTable();
+            }
         }
 
-        // Build the HTML inputs (Runs only on load, add, or delete)
+        // Build the HTML inputs
         function renderFlightTable() {
             const fBody = document.getElementById('fBody'); fBody.innerHTML = '';
             const flights = journeys[currentKey]?.flights || [];
@@ -300,21 +330,34 @@
             document.getElementById('tableCard').style.display = flights.length > 0 ? 'block' : 'none';
             
             flights.forEach((f, i) => {
-                // Ensure legacy data has the new priority fields
+                // Ensure legacy data has new properties
                 f.qP11 = f.qP11 || 0; f.qP25 = f.qP25 || 0;
+                if(f.locked === undefined) f.locked = true; 
 
                 const row = document.createElement('tr');
                 row.id = `row-${i}`;
+                
+                const disabledAttr = f.locked ? 'disabled' : '';
+
                 row.innerHTML = `
-                    <td><input type="text" class="tbl-input" value="${f.num}" oninput="updateFlightData(${i}, 'num', this.value)"></td>
-                    <td><input type="number" class="tbl-input" value="${f.total}" oninput="updateFlightData(${i}, 'total', this.value)"></td>
-                    <td><input type="number" class="tbl-input" value="${f.booked}" oninput="updateFlightData(${i}, 'booked', this.value)"></td>
+                    <td>
+                        <div style="display:flex; justify-content:center; gap:2px;">
+                            <button class="btn-icon" style="padding:2px 6px;" onclick="moveFlight(${i}, -1)" ${i === 0 ? 'disabled' : ''}>▲</button>
+                            <button class="btn-icon" style="padding:2px 6px;" onclick="moveFlight(${i}, 1)" ${i === flights.length - 1 ? 'disabled' : ''}>▼</button>
+                        </div>
+                    </td>
+                    <td><input type="text" class="tbl-input" value="${f.num}" ${disabledAttr} oninput="updateFlightData(${i}, 'num', this.value)"></td>
+                    <td><input type="number" class="tbl-input" value="${f.total}" ${disabledAttr} oninput="updateFlightData(${i}, 'total', this.value)"></td>
+                    <td><input type="number" class="tbl-input" value="${f.booked}" ${disabledAttr} oninput="updateFlightData(${i}, 'booked', this.value)"></td>
                     <td id="rem-${i}" class="disp-cell">--</td>
-                    <td><input type="number" class="tbl-input" value="${f.qP11}" oninput="updateFlightData(${i}, 'qP11', this.value)"></td>
-                    <td><input type="number" class="tbl-input" value="${f.qP25}" oninput="updateFlightData(${i}, 'qP25', this.value)"></td>
+                    <td><input type="number" class="tbl-input" value="${f.qP11}" ${disabledAttr} oninput="updateFlightData(${i}, 'qP11', this.value)"></td>
+                    <td><input type="number" class="tbl-input" value="${f.qP25}" ${disabledAttr} oninput="updateFlightData(${i}, 'qP25', this.value)"></td>
                     <td><input type="checkbox" class="t-target" ${f.target ? 'checked' : ''} onchange="updateFlightData(${i}, 'target', this.checked)"></td>
                     <td id="roll-${i}" class="disp-cell" style="color:#64748b;">--</td>
-                    <td><button class="btn-del" onclick="deleteFlightItem(${i})">X</button></td>
+                    <td>
+                        <button class="btn-icon" onclick="toggleFlightLock(${i})" title="${f.locked ? 'Unlock to Edit' : 'Lock Flight'}">${f.locked ? '🔒' : '🔓'}</button>
+                        <button class="btn-del" onclick="deleteFlightItem(${i})">X</button>
+                    </td>
                 `;
                 fBody.appendChild(row);
             });
@@ -322,12 +365,12 @@
             updatePredictions();
         }
 
-        // Core Engine: Calculates logic and updates text cells
+        // Core Engine & Fallback Logic
         function updatePredictions() {
             const flights = journeys[currentKey]?.flights || [];
             if(flights.length === 0) { document.getElementById('resBox').style.display = 'none'; return; }
 
-            // Helper to run simulation for a specific priority
+            // Helper to run simulation for a specific priority across all flights sequentially
             const runSim = (priorityKey) => {
                 let rollover = 0;
                 let results = [];
@@ -338,7 +381,7 @@
                     
                     let clears = rem > queueAhead;
                     let buffer = clears ? (rem - queueAhead - 1) : 0;
-                    let newRollover = clears ? 0 : (queueAhead - rem + 1); // +1 because you carry over too
+                    let newRollover = clears ? 0 : (queueAhead - rem + 1);
                     
                     results.push({ rem, clears, buffer, rollover: newRollover });
                     rollover = newRollover;
@@ -351,7 +394,7 @@
 
             let targetIdx = flights.findIndex(f => f.target);
 
-            // Update UI Table purely for display (We will display P25 rollover as default view, or P11 if requested, but let's default table visual to P25)
+            // Update purely visual UI cells
             flights.forEach((f, i) => {
                 let remCell = document.getElementById(`rem-${i}`);
                 let rollCell = document.getElementById(`roll-${i}`);
@@ -360,21 +403,19 @@
                 let rem = sim25[i].rem;
                 remCell.innerText = rem;
                 remCell.className = `disp-cell ${rem > 0 ? 'rem-pos' : 'rem-neg'}`;
-                
-                // Displaying P25 rollover context in the table
                 rollCell.innerText = sim25[i].rollover;
                 
                 if(i === targetIdx) row.classList.add('target-row');
                 else row.classList.remove('target-row');
             });
 
-            // Update Conclusion Box
+            // Update Conclusion & Fallback Alert Box
             const resBox = document.getElementById('resBox');
             resBox.style.display = 'block';
 
             if(targetIdx === -1) {
                 resBox.className = 'alert alert-info';
-                resBox.innerHTML = `<strong>ℹ️ Select a Target</strong><br>Check the 'Target' box next to the flight you want to get on for priority recommendations.`;
+                resBox.innerHTML = `<strong>ℹ️ Select a Target</strong><br>Check the 'Target' box next to the flight you want to get on.`;
             } else {
                 let targetF = flights[targetIdx];
                 let r25 = sim25[targetIdx];
@@ -385,21 +426,39 @@
                     resBox.innerHTML = `
                         <strong>✅ Use P25 Priority</strong><br>
                         You will comfortably clear targeted flight <b>${targetF.num}</b> using P25.
-                        <div class="buffer-text">Buffer limit: ${r25.buffer} more people can join ahead of you. If ${r25.buffer + 1} list, you'll miss it.</div>
+                        <div class="buffer-text">Buffer limit: ${r25.buffer} more people can join ahead of you.</div>
                     `;
                 } else if(r11.clears) {
                     resBox.className = 'alert alert-warning';
                     resBox.innerHTML = `
                         <strong>⚠️ Upgrade to P11 Priority!</strong><br>
-                        P25 fails for <b>${targetF.num}</b>. However, using P11 will bypass the queue and secure your seat!
-                        <div class="buffer-text">Buffer limit: ${r11.buffer} more people can list ahead of you before P11 also fails.</div>
+                        P25 fails for <b>${targetF.num}</b>. However, using P11 secures your seat!
+                        <div class="buffer-text">Buffer limit: ${r11.buffer} more people can list ahead before P11 fails.</div>
                     `;
                 } else {
+                    // FALLBACK ENGINE: Search subsequent flights for the next opening
+                    let fallbackP25 = null;
+                    let fallbackP11 = null;
+                    
+                    for(let j = targetIdx + 1; j < flights.length; j++) {
+                        if(!fallbackP25 && sim25[j].clears) fallbackP25 = flights[j];
+                        if(!fallbackP11 && sim11[j].clears) fallbackP11 = flights[j];
+                    }
+
+                    let fallbackHTML = `<div class="fallback-box">💡 <strong>Next Available Option:</strong><br> No subsequent flights are available on this list.</div>`;
+                    
+                    if (fallbackP25) {
+                        fallbackHTML = `<div class="fallback-box" style="color: #047857;">💡 <strong>Next Available Option:</strong><br> The earliest flight you can successfully board is <b>${fallbackP25.num}</b> (using standard P25).</div>`;
+                    } else if (fallbackP11) {
+                        fallbackHTML = `<div class="fallback-box" style="color: #b45309;">💡 <strong>Next Available Option:</strong><br> The earliest flight you can board is <b>${fallbackP11.num}</b>, but you <b>must</b> upgrade to P11.</div>`;
+                    }
+
                     resBox.className = 'alert alert-danger';
                     resBox.innerHTML = `
                         <strong>❌ Target Flight Unavailable</strong><br>
-                        Even with P11 priority, you will not clear <b>${targetF.num}</b>. You will roll over to the next flight.
+                        Even with P11 priority, you will not clear <b>${targetF.num}</b>. You will roll over to the standby list.
                         <div class="buffer-text">Shortfall: You need ${r11.rollover} more seats to clear.</div>
+                        ${fallbackHTML}
                     `;
                 }
             }
